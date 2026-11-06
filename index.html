@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Catatan Usaha Snack — Cloud Live (Vercel + Supabase)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      border: 1px solid #e2e8f0;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+    }
+    .live-dot {
+      animation: pulse-dot 1.8s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- HEADER DENGAN STATUS CLOUD SUPABASE -->
+  <header class="bg-slate-900 text-white sticky top-0 z-30 shadow">
+    <div class="max-w-5xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🥨</span>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-base sm:text-lg font-extrabold">Buku Catatan Titip Snack</h1>
+            <!-- INDIKATOR LIVE CLOUD -->
+            <span id="live-badge" class="inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
+              <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+              <span id="live-text">Menghubungkan ke Supabase...</span>
+            </span>
+          </div>
+          <p class="text-xs text-slate-300">Harga dari kita: <b class="text-amber-400">Rp 1.500/bks</b> (Warung jual Rp 2.000)</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="exportCSV()" class="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg">
+          📥 Download Excel
+        </button>
+        <button onclick="resetDefault()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700">
+          🔄 Reset Data Awal
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 pt-5 space-y-6">
+
+    <!-- ==================== RAPOR KEUANGAN & STOK (PALING ATAS & MUDAH DIBACA) ==================== -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-extrabold uppercase tracking-wider text-slate-500">📊 Ringkasan Usaha Saat Ini (Live Cloud)</h2>
+        <span id="last-sync-time" class="text-[11px] text-emerald-700 font-bold"></span>
+      </div>
+
+      <!-- 3 Kotak Uang Utama -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- 1. Uang Keluar -->
+        <div class="card p-4 border-l-4 border-l-rose-500">
+          <span class="text-xs font-bold text-slate-500 uppercase">1. Total Uang Keluar (Modal)</span>
+          <p id="top-modal" class="text-2xl font-extrabold text-slate-900 mt-1">Rp 0</p>
+          <p id="top-modal-detail" class="text-xs text-slate-500 mt-1">Snack + Plastik Roll + Stiker + Bensin</p>
+        </div>
+
+        <!-- 2. Uang Masuk -->
+        <div class="card p-4 border-l-4 border-l-emerald-500">
+          <span class="text-xs font-bold text-slate-500 uppercase">2. Uang Masuk (Dari Toko)</span>
+          <p id="top-omzet" class="text-2xl font-extrabold text-emerald-600 mt-1">Rp 0</p>
+          <p id="top-omzet-detail" class="text-xs text-slate-500 mt-1">0 bungkus terjual × Rp 1.500</p>
+        </div>
+
+        <!-- 3. Hasil Akhir (Untung / Kurang Berapa) -->
+        <div id="top-profit-card" class="card p-4 border-l-4 border-l-amber-500">
+          <span class="text-xs font-bold text-slate-500 uppercase">3. Posisi Keuangan Sekarang</span>
+          <p id="top-profit" class="text-2xl font-extrabold mt-1">Rp 0</p>
+          <p id="top-profit-status" class="text-xs font-bold mt-1">-</p>
+        </div>
+      </div>
+
+      <!-- 3 Kotak Nasib Bungkus Snack -->
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+          <span class="text-xs font-bold text-emerald-900 block">✅ Sudah Laku Terjual</span>
+          <strong id="top-pack-sold" class="text-lg sm:text-xl font-extrabold text-emerald-700">0 Bks</strong>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <span class="text-xs font-bold text-amber-900 block">🔄 Sisa Bagus (Masih di Toko / Siap Oper)</span>
+          <strong id="top-pack-good" class="text-lg sm:text-xl font-extrabold text-amber-700">0 Bks</strong>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3">
+          <span class="text-xs font-bold text-rose-900 block">⚠️ Melempem / Bawa Pulang (Rugi)</span>
+          <strong id="top-pack-bad" class="text-lg sm:text-xl font-extrabold text-rose-600">0 Bks</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TOMBOL PINDAH MENU SEDERHANA ==================== -->
+    <div class="flex gap-2 border-b border-slate-300 pb-3 overflow-x-auto">
+      <button onclick="showSection('stores')" id="btn-sec-stores" class="px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap">
+        🏪 1. Cek & Isi 10 Toko Titipan
+      </button>
+      <button onclick="showSection('modal')" id="btn-sec-modal" class="px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap">
+        💸 2. Catatan Beli Bahan (Snack, Plastik Roll, Stiker, Bensin)
+      </button>
+    </div>
+
+    <!-- ==================== BAGIAN TOKO TITIPAN ==================== -->
+    <section id="sec-stores" class="space-y-5">
+
+      <!-- Kotak Info Toko Paling Laris (Untuk Tujuan Oper Snack Sisa) -->
+      <div class="card p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span class="text-xs font-extrabold uppercase text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
+              🔥 Info Toko Paling Cepat Habis
+            </span>
+            <h3 class="text-sm sm:text-base font-extrabold text-slate-900 mt-1">
+              Kalau ada sisa snack yang masih renyah, oper ke toko ini:
+            </h3>
+          </div>
+        </div>
+        <div id="fastest-stores-banner" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3"></div>
+      </div>
+
+      <!-- Baris Judul & Tambah Toko -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Daftar Toko Titipan Kamu</h2>
+          <p class="text-xs text-slate-500">Klik nama toko untuk mengganti namanya. Centang jajan apa saja yang ditaruh di toko tersebut.</p>
+        </div>
+        <button onclick="addNewStore()" class="text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl self-start sm:self-auto">
+          ➕ Tambah Toko Baru
+        </button>
+      </div>
+
+      <!-- Daftar Kartu Toko -->
+      <div id="stores-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- ==================== BAGIAN MODAL & OPERASIONAL ==================== -->
+    <section id="sec-modal" class="hidden space-y-5">
+      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs sm:text-sm text-emerald-950 space-y-1.5">
+        <p class="font-extrabold text-emerald-900">💡 Solusi Soal Plastik Roll (Rp 34.000) & Stiker Lembaran:</p>
+        <p>
+          Kamu <b>tidak perlu bingung</b> menghitung 1 roll plastik jadi berapa bungkus persisnya. Gunakan <b>Sistem Catat Saat Beli</b>:
+        </p>
+        <ul class="list-disc list-inside space-y-1 text-emerald-900">
+          <li>Saat kamu beli <b>Plastik Roll Rp 34.000</b>, tulis saja sekali Rp 34.000 di bawah ini.</li>
+          <li>Karena 1 roll muat 400–500 bungkus (bisa untuk 4 kali beli snack 2kg), maka <b>minggu depan saat beli snack lagi dan plastiknya masih ada, kamu tidak perlu tulis biaya plastik lagi!</b></li>
+        </ul>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- Form Catat Pengeluaran -->
+        <div class="card p-5 space-y-3 h-fit">
+          <h3 class="text-base font-extrabold text-slate-900">➕ Catat Uang Keluar Baru</h3>
+          <form onsubmit="addExpense(event)" class="space-y-3 text-xs">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Tanggal Beli</label>
+              <input type="date" id="exp-date" required class="w-full border border-slate-300 rounded-xl px-3 py-2" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Beli Apa?</label>
+              <select id="exp-category" onchange="autoFillCategory()" class="w-full border border-slate-300 rounded-xl px-3 py-2 font-semibold">
+                <option value="Beli Keripik Sagu (2 Kg)">🥠 Beli Snack Keripik Sagu (2 Kg)</option>
+                <option value="Beli Kerupuk Seblak (2 Kg)">🌶️ Beli Snack Kerupuk Seblak (2 Kg)</option>
+                <option value="Beli Plastik Roll">🛍️ Beli Plastik Roll (Stok 400-500 bks)</option>
+                <option value="Beli Stiker Lembaran">🏷️ Beli Stiker Kemasan (Lembaran)</option>
+                <option value="Beli Bensin Keliling">⛽ Bensin Antar / Ambil ke Toko</option>
+                <option value="Lainnya">📦 Biaya Lainnya</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Berapa Rupiah? (Rp)</label>
+              <input type="number" id="exp-amount" value="71000" min="0" required class="w-full border border-slate-300 rounded-xl px-3 py-2 font-extrabold text-base text-slate-900" />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Keterangan (Opsional)</label>
+              <input type="text" id="exp-note" placeholder="Contoh: Jadi 110 bungkus kecil @17gr" class="w-full border border-slate-300 rounded-xl px-3 py-2" />
+            </div>
+            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-2.5 rounded-xl">
+              💾 Tambahkan ke Catatan Modal
+            </button>
+          </form>
+        </div>
+
+        <!-- Daftar Pengeluaran -->
+        <div class="card p-5 lg:col-span-2 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-900">Daftar Semua Uang Keluar (Modal & Operasional)</h3>
+              <p class="text-xs text-slate-500">Klik tombol hapus (🗑️) jika ada catatan yang salah</p>
+            </div>
+            <strong id="exp-total-badge" class="text-sm font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl">
+              Total: Rp 0
+            </strong>
+          </div>
+
+          <div id="expenses-list" class="divide-y divide-slate-100 text-xs"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL OPER SISA BAGUS KE TOKO LARIS -->
+  <div id="oper-modal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-slate-900">🔄 Oper Snack Sisa (Masih Bagus)</h3>
+        <button onclick="closeOperModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      </div>
+      <p id="oper-text" class="text-xs text-slate-600"></p>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Pindahkan ke Toko Mana? (Urut dari yang Paling Cepat Habis 🔥)</label>
+          <select id="oper-target" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 font-bold"></select>
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Jumlah Bungkus yang Dioper</label>
+          <input type="number" id="oper-qty" min="1" class="w-full border border-slate-300 rounded-xl px-3 py-2 font-extrabold text-base" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeOperModal()" class="text-xs font-bold px-4 py-2 rounded-xl border border-slate-300 text-slate-600">Batal</button>
+        <button onclick="confirmOper()" class="text-xs font-extrabold px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950">
+          ✅ Oper Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // KONFIGURASI SUPABASE SUDAH TERTANAM OTOMATIS
+    // ============================================================================
+    const SUPABASE_REST_URL = 'https://znpakqkyayusuejecbgq.supabase.co/rest/v1/snack_monitoring';
+    const SUPABASE_API_KEY = 'sb_publishable_2SM6H42pAjBsLTZd2Zvs7g_nEtsgaje';
+
+    const STORAGE_KEY = 'SNACK_SIMPLE_V2';
+    const HARGA_SETOR = 1500;
+
+    let state = null;
+    let operCtx = null;
+
+    function todayStr(offsetDays = 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      return d.toISOString().split('T')[0];
+    }
+
+    function rp(num) {
+      const n = Math.round(num || 0);
+      return (n < 0 ? '-Rp ' : 'Rp ') + Math.abs(n).toLocaleString('id-ID');
+    }
+
+    function defaultData() {
+      const tglTitip = todayStr(-7);
+      return {
+        updatedAt: Date.now(),
+        expenses: [
+          { id: 'e1', date: tglTitip, category: 'Beli Keripik Sagu (2 Kg)', amount: 71000, note: '2 Kg dibagi 16-18gr jadi ~110 bungkus' },
+          { id: 'e2', date: tglTitip, category: 'Beli Kerupuk Seblak (2 Kg)', amount: 71000, note: '2 Kg dibagi 16-18gr jadi ~110 bungkus' },
+          { id: 'e3', date: tglTitip, category: 'Beli Plastik Roll', amount: 34000, note: '1 Roll potong sendiri (cukup buat 400-500 bks)' },
+          { id: 'e4', date: tglTitip, category: 'Beli Stiker Lembaran', amount: 15000, note: 'Stiker kemasan per lembar (isi 100-200+ pcs)' },
+          { id: 'e5', date: tglTitip, category: 'Beli Bensin Keliling', amount: 15000, note: 'Bensin keliling titip & ambil ke 10 toko' }
+        ],
+        stores: [
+          { id: 't1',  name: 'Toko 1',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 11, melempem: 0 }, seblak: { titip: 12, laku: 12, melempem: 0 } },
+          { id: 't2',  name: 'Toko 2',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 10, melempem: 0 }, seblak: { titip: 12, laku: 10, melempem: 0 } },
+          { id: 't3',  name: 'Toko 3',  dropDate: tglTitip, sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 15, melempem: 1 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't4',  name: 'Toko 4',  dropDate: tglTitip, sellSagu: false, sellSeblak: true,  sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 20, laku: 18, melempem: 0 } },
+          { id: 't5',  name: 'Toko 5',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 12, melempem: 0 }, seblak: { titip: 12, laku: 11, melempem: 0 } },
+          { id: 't6',  name: 'Toko 6',  dropDate: tglTitip, sellSagu: true,  sellSeblak: false, sagu: { titip: 18, laku: 9,  melempem: 1 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't7',  name: 'Toko 7',  dropDate: tglTitip, sellSagu: false, sellSeblak: true,  sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 18, laku: 12, melempem: 0 } },
+          { id: 't8',  name: 'Toko 8',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 8,  melempem: 0 }, seblak: { titip: 12, laku: 9,  melempem: 1 } },
+          { id: 't9',  name: 'Toko 9',  dropDate: tglTitip, sellSagu: true,  sellSeblak: false, sagu: { titip: 15, laku: 10, melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't10', name: 'Toko 10', dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 10, laku: 6,  melempem: 0 }, seblak: { titip: 10, laku: 7,  melempem: 0 } }
+        ]
+      };
+    }
+
+    function setCloudStatus(online, message) {
+      const badge = document.getElementById('live-badge');
+      const dot = document.getElementById('live-dot');
+      const txt = document.getElementById('live-text');
+
+      if (online) {
+        badge.className = 'inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-full';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 live-dot';
+        txt.textContent = message || 'CLOUD LIVE AKTIF (HP ↔ Laptop)';
+      } else {
+        badge.className = 'inline-flex items-center gap-1.5 text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        txt.textContent = message || 'Mode Offline (Tersimpan di HP/Laptop)';
+      }
+    }
+
+    async function initApp() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { state = JSON.parse(raw); } catch (e) { state = defaultData(); }
+      } else {
+        state = defaultData();
+      }
+      render();
+
+      await initialSyncSupabase();
+      setInterval(pullFromSupabase, 2000);
+    }
+
+    async function initialSyncSupabase() {
+      try {
+        const res = await fetch(`${SUPABASE_REST_URL}?id=eq.utama&select=*`, {
+          headers: {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': `Bearer ${SUPABASE_API_KEY}`
+          },
+          cache: 'no-store'
+        });
+
+        if (!res.ok) {
+          setCloudStatus(false, 'Menunggu Tabel SQL di Supabase');
+          return;
+        }
+
+        const rows = await res.json();
+        if (rows && rows.length > 0 && rows[0].data && rows[0].data.stores) {
+          state = rows[0].data;
+          state.updatedAt = rows[0].updated_at || state.updatedAt;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          render();
+          setCloudStatus(true, 'CLOUD LIVE AKTIF (HP ↔ Laptop)');
+        } else {
+          await pushToSupabase();
+        }
+      } catch (e) {
+        setCloudStatus(false, 'Mode Offline Sementara');
+      }
+    }
+
+    async function pushToSupabase() {
+      try {
+        const payload = {
+          id: 'utama',
+          data: state,
+          updated_at: state.updatedAt || Date.now()
+        };
+
+        const res = await fetch(`${SUPABASE_REST_URL}?on_conflict=id`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': `Bearer ${SUPABASE_API_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          setCloudStatus(true, 'CLOUD LIVE AKTIF (HP ↔ Laptop)');
+          const now = new Date();
+          document.getElementById('last-sync-time').textContent =
+            '☁️ Tersimpan di Cloud: ' + now.toLocaleTimeString('id-ID');
+        }
+      } catch (e) {
+        setCloudStatus(false, 'Mode Offline Sementara');
+      }
+    }
+
+    async function pullFromSupabase() {
+      if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        return;
+      }
+      try {
+        const res = await fetch(`${SUPABASE_REST_URL}?id=eq.utama&select=data,updated_at`, {
+          headers: {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': `Bearer ${SUPABASE_API_KEY}`
+          },
+          cache: 'no-store'
+        });
+        if (!res.ok) return;
+        const rows = await res.json();
+        if (rows && rows.length > 0 && rows[0].data && rows[0].updated_at) {
+          setCloudStatus(true, 'CLOUD LIVE AKTIF (HP ↔ Laptop)');
+          if (!state.updatedAt || rows[0].updated_at > state.updatedAt) {
+            state = rows[0].data;
+            state.updatedAt = rows[0].updated_at;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            render();
+            const now = new Date();
+            document.getElementById('last-sync-time').textContent =
+              '☁️ Update Live diterima: ' + now.toLocaleTimeString('id-ID');
+          }
+        }
+      } catch (e) {
+        // Ignore transient network errors
+      }
+    }
+
+    function save() {
+      state.updatedAt = Date.now();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      render();
+      pushToSupabase();
+    }
+
+    function calcSisaBagus(item) {
+      return Math.max(0, (item.titip || 0) - (item.laku || 0) - (item.melempem || 0));
+    }
+
+    function calcStore(st) {
+      const saguBagus = st.sellSagu ? calcSisaBagus(st.sagu) : 0;
+      const seblakBagus = st.sellSeblak ? calcSisaBagus(st.seblak) : 0;
+
+      const totalTitip = (st.sellSagu ? st.sagu.titip : 0) + (st.sellSeblak ? st.seblak.titip : 0);
+      const totalLaku = (st.sellSagu ? st.sagu.laku : 0) + (st.sellSeblak ? st.seblak.laku : 0);
+      const totalMelempem = (st.sellSagu ? st.sagu.melempem : 0) + (st.sellSeblak ? st.seblak.melempem : 0);
+      const totalBagus = saguBagus + seblakBagus;
+      const uangSetor = totalLaku * HARGA_SETOR;
+      const persenLaku = totalTitip > 0 ? Math.round((totalLaku / totalTitip) * 100) : 0;
+
+      const d = new Date(st.dropDate || todayStr());
+      d.setDate(d.getDate() + 7);
+      const dueStr = d.toISOString().split('T')[0];
+
+      return { saguBagus, seblakBagus, totalTitip, totalLaku, totalMelempem, totalBagus, uangSetor, persenLaku, dueStr };
+    }
+
+    function render() {
+      const totalModal = state.expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+
+      let sumTitip = 0, sumLaku = 0, sumBagus = 0, sumMelempem = 0;
+      state.stores.forEach(st => {
+        const m = calcStore(st);
+        sumTitip += m.totalTitip;
+        sumLaku += m.totalLaku;
+        sumBagus += m.totalBagus;
+        sumMelempem += m.totalMelempem;
+      });
+
+      const totalOmzet = sumLaku * HARGA_SETOR;
+      const selisih = totalOmzet - totalModal;
+
+      document.getElementById('top-modal').textContent = rp(totalModal);
+      document.getElementById('top-modal-detail').textContent = `Dari ${state.expenses.length} catatan pengeluaran`;
+
+      document.getElementById('top-omzet').textContent = rp(totalOmzet);
+      document.getElementById('top-omzet-detail').textContent = `${sumLaku} bungkus laku × Rp 1.500`;
+
+      const profitEl = document.getElementById('top-profit');
+      const statusEl = document.getElementById('top-profit-status');
+      const cardEl = document.getElementById('top-profit-card');
+
+      if (selisih >= 0) {
+        profitEl.textContent = '+' + rp(selisih);
+        profitEl.className = 'text-2xl font-extrabold text-emerald-600 mt-1';
+        statusEl.textContent = '✅ SUDAH BALIK MODAL & UNTUNG BERSIH!';
+        statusEl.className = 'text-xs font-extrabold text-emerald-700 mt-1';
+        cardEl.className = 'card p-4 border-l-4 border-l-emerald-500 bg-emerald-50/40';
+      } else {
+        const kurangBks = Math.ceil(Math.abs(selisih) / HARGA_SETOR);
+        profitEl.textContent = rp(selisih);
+        profitEl.className = 'text-2xl font-extrabold text-amber-600 mt-1';
+        statusEl.textContent = `⏳ Kurang laku ${kurangBks} bungkus lagi buat Balik Modal`;
+        statusEl.className = 'text-xs font-extrabold text-amber-800 mt-1';
+        cardEl.className = 'card p-4 border-l-4 border-l-amber-500';
+      }
+
+      document.getElementById('top-pack-sold').textContent = `${sumLaku} Bks`;
+      document.getElementById('top-pack-good').textContent = `${sumBagus} Bks`;
+      document.getElementById('top-pack-bad').textContent = `${sumMelempem} Bks`;
+
+      const ranked = [...state.stores]
+        .map(s => ({ s, m: calcStore(s) }))
+        .sort((a, b) => b.m.persenLaku - a.m.persenLaku || b.m.totalLaku - a.m.totalLaku)
+        .slice(0, 3);
+
+      document.getElementById('fastest-stores-banner').innerHTML = ranked.map((item, idx) => `
+        <div class="bg-white rounded-xl p-3 border border-amber-200 flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-extrabold text-amber-700">🏆 Terlaris #${idx + 1}</span>
+            <strong class="block text-sm font-extrabold text-slate-900">${item.s.name}</strong>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-extrabold text-emerald-600 block">Laku ${item.m.persenLaku}%</span>
+            <span class="text-[11px] text-slate-500">${item.m.totalLaku} dari ${item.m.totalTitip} bks</span>
+          </div>
+        </div>
+      `).join('');
+
+      const storesEl = document.getElementById('stores-list');
+      storesEl.innerHTML = state.stores.map(st => {
+        const m = calcStore(st);
+        return `
+          <div class="card p-4 space-y-3.5 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2 flex-1">
+                  <span class="text-lg">🏪</span>
+                  <input type="text" value="${st.name}"
+                    onchange="updateStore('${st.id}', 'name', this.value)"
+                    class="font-extrabold text-base text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-slate-900 focus:outline-none w-full"
+                    title="Klik untuk ganti nama toko" />
+                </div>
+                <button onclick="removeStore('${st.id}')" class="text-xs text-slate-400 hover:text-rose-600 px-1.5" title="Hapus toko">🗑️</button>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-50 p-2.5 rounded-xl">
+                <div class="flex items-center gap-3">
+                  <label class="flex items-center gap-1.5 font-bold text-amber-900 cursor-pointer">
+                    <input type="checkbox" ${st.sellSagu ? 'checked' : ''}
+                      onchange="toggleProduct('${st.id}', 'sellSagu', this.checked)"
+                      class="rounded text-amber-600" />
+                    🥠 Sagu
+                  </label>
+                  <label class="flex items-center gap-1.5 font-bold text-rose-900 cursor-pointer">
+                    <input type="checkbox" ${st.sellSeblak ? 'checked' : ''}
+                      onchange="toggleProduct('${st.id}', 'sellSeblak', this.checked)"
+                      class="rounded text-rose-600" />
+                    🌶️ Seblak
+                  </label>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                  <span class="text-slate-500">Titip:</span>
+                  <input type="date" value="${st.dropDate}"
+                    onchange="updateStore('${st.id}', 'dropDate', this.value)"
+                    class="border border-slate-300 rounded-lg px-2 py-0.5 font-bold text-slate-800 bg-white" />
+                </div>
+              </div>
+
+              ${st.sellSagu ? `
+                <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
+                  <div class="flex justify-between items-center text-xs">
+                    <strong class="font-extrabold text-amber-950">🥠 Keripik Sagu</strong>
+                    <span class="font-bold text-emerald-700">Uang Laku: ${rp(st.sagu.laku * HARGA_SETOR)}</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div class="bg-white p-2 rounded-lg border border-amber-200">
+                      <label class="text-[10px] font-bold text-slate-500 block">1. Dititip</label>
+                      <input type="number" min="0" value="${st.sagu.titip}"
+                        onchange="updateItem('${st.id}', 'sagu', 'titip', this.value)"
+                        class="w-full font-extrabold text-base text-slate-900 focus:outline-none" />
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border-2 border-emerald-400">
+                      <label class="text-[10px] font-bold text-emerald-700 block">2. Laku Terjual</label>
+                      <input type="number" min="0" value="${st.sagu.laku}"
+                        onchange="updateItem('${st.id}', 'sagu', 'laku', this.value)"
+                        class="w-full font-extrabold text-base text-emerald-700 focus:outline-none" />
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border border-rose-300">
+                      <label class="text-[10px] font-bold text-rose-600 block">3. Melempem</label>
+                      <input type="number" min="0" value="${st.sagu.melempem}"
+                        onchange="updateItem('${st.id}', 'sagu', 'melempem', this.value)"
+                        class="w-full font-extrabold text-base text-rose-600 focus:outline-none" />
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between pt-1 text-xs">
+                    <span class="text-amber-900">Sisa Masih Bagus: <b>${m.saguBagus} bungkus</b></span>
+                    ${m.saguBagus > 0 ? `
+                      <button onclick="openOper('${st.id}', 'sagu', ${m.saguBagus})"
+                        class="text-[11px] font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg">
+                        🔄 Oper ke Toko Laris
+                      </button>
+                    ` : '<span class="text-[11px] font-bold text-emerald-700">✨ Habis!</span>'}
+                  </div>
+                </div>
+              ` : ''}
+
+              ${st.sellSeblak ? `
+                <div class="p-3 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2">
+                  <div class="flex justify-between items-center text-xs">
+                    <strong class="font-extrabold text-rose-950">🌶️ Kerupuk Seblak</strong>
+                    <span class="font-bold text-emerald-700">Uang Laku: ${rp(st.seblak.laku * HARGA_SETOR)}</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div class="bg-white p-2 rounded-lg border border-rose-200">
+                      <label class="text-[10px] font-bold text-slate-500 block">1. Dititip</label>
+                      <input type="number" min="0" value="${st.seblak.titip}"
+                        onchange="updateItem('${st.id}', 'seblak', 'titip', this.value)"
+                        class="w-full font-extrabold text-base text-slate-900 focus:outline-none" />
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border-2 border-emerald-400">
+                      <label class="text-[10px] font-bold text-emerald-700 block">2. Laku Terjual</label>
+                      <input type="number" min="0" value="${st.seblak.laku}"
+                        onchange="updateItem('${st.id}', 'seblak', 'laku', this.value)"
+                        class="w-full font-extrabold text-base text-emerald-700 focus:outline-none" />
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border border-rose-300">
+                      <label class="text-[10px] font-bold text-rose-600 block">3. Melempem</label>
+                      <input type="number" min="0" value="${st.seblak.melempem}"
+                        onchange="updateItem('${st.id}', 'seblak', 'melempem', this.value)"
+                        class="w-full font-extrabold text-base text-rose-600 focus:outline-none" />
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between pt-1 text-xs">
+                    <span class="text-rose-900">Sisa Masih Bagus: <b>${m.seblakBagus} bungkus</b></span>
+                    ${m.seblakBagus > 0 ? `
+                      <button onclick="openOper('${st.id}', 'seblak', ${m.seblakBagus})"
+                        class="text-[11px] font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg">
+                        🔄 Oper ke Toko Laris
+                      </button>
+                    ` : '<span class="text-[11px] font-bold text-emerald-700">✨ Habis!</span>'}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span class="text-slate-500">Jadwal Ambil (+7hr): <b>${m.dueStr}</b></span>
+              <div>
+                <span class="text-slate-500">Setoran Toko Ini: </span>
+                <strong class="text-sm font-extrabold text-emerald-600">${rp(m.uangSetor)}</strong>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('exp-total-badge').textContent = 'Total Modal: ' + rp(totalModal);
+      const expEl = document.getElementById('expenses-list');
+      expEl.innerHTML = state.expenses.map(e => `
+        <div class="py-3 flex items-center justify-between gap-2">
+          <div>
+            <span class="text-[11px] text-slate-400 font-semibold">${e.date}</span>
+            <strong class="block text-sm font-extrabold text-slate-800">${e.category}</strong>
+            <span class="text-xs text-slate-500">${e.note || ''}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <strong class="text-sm font-extrabold text-rose-600">${rp(e.amount)}</strong>
+            <button onclick="deleteExpense('${e.id}')" class="text-slate-300 hover:text-rose-600 font-bold text-sm">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showSection(sec) {
+      document.getElementById('sec-stores').classList.toggle('hidden', sec !== 'stores');
+      document.getElementById('sec-modal').classList.toggle('hidden', sec !== 'modal');
+
+      document.getElementById('btn-sec-stores').className = sec === 'stores'
+        ? 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap'
+        : 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap';
+
+      document.getElementById('btn-sec-modal').className = sec === 'modal'
+        ? 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap'
+        : 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap';
+    }
+
+    function updateStore(id, field, val) {
+      const st = state.stores.find(s => s.id === id);
+      if (st) { st[field] = val; save(); }
+    }
+
+    function toggleProduct(id, field, checked) {
+      const st = state.stores.find(s => s.id === id);
+      if (!st) return;
+      st[field] = checked;
+      if (field === 'sellSagu' && checked && st.sagu.titip === 0) st.sagu.titip = 10;
+      if (field === 'sellSeblak' && checked && st.seblak.titip === 0) st.seblak.titip = 10;
+      save();
+    }
+
+    function updateItem(id, prod, field, val) {
+      const st = state.stores.find(s => s.id === id);
+      if (!st) return;
+      const num = Math.max(0, parseInt(val || 0, 10));
+      st[prod][field] = num;
+      const used = (st[prod].laku || 0) + (st[prod].melempem || 0);
+      if (used > st[prod].titip) st[prod].titip = used;
+      save();
+    }
+
+    function addNewStore() {
+      const nextNum = state.stores.length + 1;
+      state.stores.push({
+        id: 't_' + Date.now(),
+        name: 'Toko ' + nextNum,
+        dropDate: todayStr(),
+        sellSagu: true,
+        sellSeblak: true,
+        sagu: { titip: 10, laku: 0, melempem: 0 },
+        seblak: { titip: 10, laku: 0, melempem: 0 }
+      });
+      save();
+    }
+
+    function removeStore(id) {
+      if (!confirm('Hapus toko ini?')) return;
+      state.stores = state.stores.filter(s => s.id !== id);
+      save();
+    }
+
+    function openOper(sourceId, prod, maxBagus) {
+      const src = state.stores.find(s => s.id === sourceId);
+      if (!src) return;
+      operCtx = { sourceId, prod, maxBagus };
+
+      const namaJajan = prod === 'sagu' ? 'Keripik Sagu' : 'Kerupuk Seblak';
+      document.getElementById('oper-text').innerHTML =
+        `Ada <b>${maxBagus} bungkus ${namaJajan}</b> yang masih bagus dari <b>${src.name}</b>. Pilih toko yang paling cepat habis untuk ditaruh sisa ini:`;
+
+      const others = state.stores
+        .filter(s => s.id !== sourceId)
+        .map(s => ({ s, m: calcStore(s) }))
+        .sort((a, b) => b.m.persenLaku - a.m.persenLaku);
+
+      document.getElementById('oper-target').innerHTML = others.map((o, i) => `
+        <option value="${o.s.id}">
+          ${i === 0 ? '🔥 [PALING CEPAT HABIS] ' : ''}${o.s.name} (Laku ${o.m.persenLaku}%)
+        </option>
+      `).join('');
+
+      const q = document.getElementById('oper-qty');
+      q.max = maxBagus;
+      q.value = maxBagus;
+
+      const modal = document.getElementById('oper-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeOperModal() {
+      const modal = document.getElementById('oper-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      operCtx = null;
+    }
+
+    function confirmOper() {
+      if (!operCtx) return;
+      const targetId = document.getElementById('oper-target').value;
+      const qty = Math.min(operCtx.maxBagus, Math.max(1, parseInt(document.getElementById('oper-qty').value || 0, 10)));
+
+      const src = state.stores.find(s => s.id === operCtx.sourceId);
+      const dst = state.stores.find(s => s.id === targetId);
+      if (!src || !dst) return;
+
+      src[operCtx.prod].titip = Math.max(0, src[operCtx.prod].titip - qty);
+      if (operCtx.prod === 'sagu') dst.sellSagu = true;
+      if (operCtx.prod === 'seblak') dst.sellSeblak = true;
+      dst[operCtx.prod].titip = (dst[operCtx.prod].titip || 0) + qty;
+
+      closeOperModal();
+      save();
+    }
+
+    function autoFillCategory() {
+      const cat = document.getElementById('exp-category').value;
+      const amt = document.getElementById('exp-amount');
+      if (cat.includes('2 Kg')) amt.value = 71000;
+      else if (cat.includes('Plastik Roll')) amt.value = 34000;
+      else if (cat.includes('Stiker')) amt.value = 15000;
+      else if (cat.includes('Bensin')) amt.value = 15000;
+    }
+
+    function addExpense(e) {
+      e.preventDefault();
+      state.expenses.unshift({
+        id: 'e_' + Date.now(),
+        date: document.getElementById('exp-date').value || todayStr(),
+        category: document.getElementById('exp-category').value,
+        amount: parseInt(document.getElementById('exp-amount').value || 0, 10),
+        note: document.getElementById('exp-note').value.trim()
+      });
+      document.getElementById('exp-note').value = '';
+      save();
+    }
+
+    function deleteExpense(id) {
+      if (!confirm('Hapus catatan pengeluaran ini?')) return;
+      state.expenses = state.expenses.filter(e => e.id !== id);
+      save();
+    }
+
+    function resetDefault() {
+      if (!confirm('Kembalikan ke contoh data awal 10 toko?')) return;
+      state = defaultData();
+      save();
+    }
+
+    function exportCSV() {
+      let csv = 'Nama Toko,Tanggal Titip,Jadwal Ambil,Titip Sagu,Laku Sagu,Sisa Bagus Sagu,Melempem Sagu,Titip Seblak,Laku Seblak,Sisa Bagus Seblak,Melempem Seblak,Total Uang Setoran (Rp)\n';
+      state.stores.forEach(st => {
+        const m = calcStore(st);
+        csv += `"${st.name}",${st.dropDate},${m.dueStr},${st.sagu.titip},${st.sagu.laku},${m.saguBagus},${st.sagu.melempem},${st.seblak.titip},${st.seblak.laku},${m.seblakBagus},${st.seblak.melempem},${m.uangSetor}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Catatan_Snack_${todayStr()}.csv`;
+      a.click();
+    }
+
+    document.getElementById('exp-date').value = todayStr();
+    initApp();
+  </script>
+</body>
+</html>
