@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#0f172a" />
   <title>Catatan Usaha Snack — Cloud Live (Vercel + Supabase)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body {
@@ -62,7 +63,7 @@
 
       <div class="flex flex-wrap items-center gap-2">
         <button onclick="exportCSV()" class="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg">
-          📥 Download Excel
+          📥 Excel Toko
         </button>
         <button onclick="resetDefault()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg border border-slate-700">
           🔄 Reset Data Awal
@@ -121,17 +122,20 @@
       </div>
     </section>
 
-    <!-- ==================== TOMBOL PINDAH MENU SEDERHANA ==================== -->
+    <!-- ==================== TOMBOL PINDAH MENU (3 TAB UTAMA) ==================== -->
     <div class="flex gap-2 border-b border-slate-300 pb-3 overflow-x-auto">
       <button onclick="showSection('stores')" id="btn-sec-stores" class="px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap">
         🏪 1. Cek & Isi 10 Toko Titipan
       </button>
       <button onclick="showSection('modal')" id="btn-sec-modal" class="px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap">
-        💸 2. Catatan Beli Bahan (Snack, Plastik Roll, Stiker, Bensin)
+        💸 2. Catatan Beli Bahan (Modal)
+      </button>
+      <button onclick="showSection('recap')" id="btn-sec-recap" class="px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap">
+        📊 3. Rekap Bulanan (Ala myBCA)
       </button>
     </div>
 
-    <!-- ==================== BAGIAN TOKO TITIPAN ==================== -->
+    <!-- ==================== BAGIAN 1: TOKO TITIPAN ==================== -->
     <section id="sec-stores" class="space-y-5">
 
       <!-- Kotak Info Toko Paling Laris (Untuk Tujuan Oper Snack Sisa) -->
@@ -162,9 +166,14 @@
             <p class="text-xs text-slate-500 mt-0.5">Centang tombol di sebelah nama toko saat snack sudah kamu taruh di toko tersebut.</p>
           </div>
 
-          <button onclick="resetAllChecklists()" class="text-xs font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-300 px-3 py-2 rounded-xl transition self-start sm:self-center">
-            🔄 Reset Semua Checklist
-          </button>
+          <div class="flex flex-wrap items-center gap-2 self-start sm:self-center">
+            <button onclick="openSaveWeekModal()" class="text-xs font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl transition shadow-2xs">
+              📥 Simpan Setoran Minggu Ini ke Rekap
+            </button>
+            <button onclick="resetAllChecklists()" class="text-xs font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-300 px-3 py-2 rounded-xl transition">
+              🔄 Reset Checklist
+            </button>
+          </div>
         </div>
 
         <!-- Visual Progress Bar -->
@@ -196,7 +205,7 @@
       <div id="stores-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </section>
 
-    <!-- ==================== BAGIAN MODAL & OPERASIONAL ==================== -->
+    <!-- ==================== BAGIAN 2: MODAL & OPERASIONAL ==================== -->
     <section id="sec-modal" class="hidden space-y-5">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <!-- Form Catat Pengeluaran -->
@@ -249,7 +258,163 @@
       </div>
     </section>
 
+    <!-- ==================== BAGIAN 3: REKAP BULANAN (ALA myBCA) ==================== -->
+    <section id="sec-recap" class="hidden space-y-5">
+
+      <!-- Header Pilih Bulan & Download Excel Bulan Ini -->
+      <div class="card p-4 sm:p-5 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
+            💳 Financial Diary Usaha Snack
+          </span>
+          <h2 class="text-base sm:text-lg font-extrabold mt-1.5">Rekap Pengeluaran & Penjualan Bulanan</h2>
+          <p class="text-xs text-slate-300">Pantau total habis berapa tiap bulan, habis di mana saja, dan perbandingannya dengan bulan lalu.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Navigasi Pilih Bulan -->
+          <div class="flex items-center bg-slate-950/60 border border-slate-700 rounded-xl p-1">
+            <button onclick="shiftMonth(-1)" class="px-2.5 py-1.5 text-xs font-extrabold text-slate-300 hover:text-white rounded-lg hover:bg-slate-800" title="Bulan Sebelumnya">
+              ◀
+            </button>
+            <select id="recap-month-select" onchange="changeRecapMonth(this.value)" class="bg-transparent text-white font-extrabold text-xs sm:text-sm px-2 py-1 focus:outline-none cursor-pointer"></select>
+            <button onclick="shiftMonth(1)" class="px-2.5 py-1.5 text-xs font-extrabold text-slate-300 hover:text-white rounded-lg hover:bg-slate-800" title="Bulan Berikutnya">
+              ▶
+            </button>
+          </div>
+
+          <button onclick="exportMonthlyCSV()" class="text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3.5 py-2.5 rounded-xl shadow flex items-center gap-1.5">
+            📥 Download Excel Bulan Ini
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 1: 3 KARTU RINGKASAN BULAN INI + PERBANDINGAN BULAN LALU -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Total Spent Bulan Ini -->
+        <div class="card p-4 border-t-4 border-t-rose-500 space-y-1">
+          <span class="text-xs font-bold text-slate-500 uppercase">💸 Total Spent (Habis Bulan Ini)</span>
+          <p id="recap-spent" class="text-2xl font-extrabold text-rose-600">Rp 0</p>
+          <p id="recap-spent-vs" class="text-[11px] font-bold text-slate-500">-</p>
+        </div>
+
+        <!-- Total Pemasukan Bulan Ini -->
+        <div class="card p-4 border-t-4 border-t-emerald-500 space-y-1">
+          <span class="text-xs font-bold text-slate-500 uppercase">💰 Pemasukan Setoran Bulan Ini</span>
+          <p id="recap-income" class="text-2xl font-extrabold text-emerald-600">Rp 0</p>
+          <p id="recap-income-vs" class="text-[11px] font-bold text-slate-500">-</p>
+        </div>
+
+        <!-- Selisih / Laba Bersih Bulan Ini -->
+        <div class="card p-4 border-t-4 border-t-blue-600 space-y-1">
+          <span class="text-xs font-bold text-slate-500 uppercase">📈 Selisih Kas (Laba Bulan Ini)</span>
+          <p id="recap-net" class="text-2xl font-extrabold text-slate-900">Rp 0</p>
+          <p id="recap-net-vs" class="text-[11px] font-bold text-slate-500">-</p>
+        </div>
+      </div>
+
+      <!-- SECTION 2: DONUT CHART & BREAKDOWN "HABIS DARI MANA SAJA" (PERSIS GAYA myBCA) -->
+      <div class="card p-5">
+        <div class="border-b border-slate-100 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">🍩 Rincian Pengeluaran: Habis di Mana Saja?</h3>
+            <p class="text-xs text-slate-500">Persentase pengeluaran modal & operasional kamu pada bulan yang dipilih</p>
+          </div>
+          <span id="recap-tx-count" class="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full self-start sm:self-center">
+            0 Transaksi
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- Donut Chart di Kiri -->
+          <div class="lg:col-span-5 flex flex-col items-center justify-center relative">
+            <div class="w-56 h-56 relative">
+              <canvas id="spentDonutChart"></canvas>
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Total Spent</span>
+                <strong id="donut-center-total" class="text-sm sm:text-base font-extrabold text-slate-900">Rp 0</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daftar Section Kategori Pengeluaran di Kanan -->
+          <div id="recap-category-list" class="lg:col-span-7 space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: RIWAYAT SETORAN MINGGUAN & TRANSAKSI BULAN INI -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- Daftar Kloter Setoran Mingguan di Bulan Ini -->
+        <div class="card p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">🏪 Rekap Setoran Penjualan Bulan Ini</h3>
+              <p class="text-xs text-slate-500">Gabungan dari kloter minggu yang disimpan & toko yang sedang berjalan</p>
+            </div>
+            <button onclick="openSaveWeekModal()" class="text-xs font-extrabold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl shrink-0">
+              ➕ Simpan Minggu Ini
+            </button>
+          </div>
+
+          <div id="recap-sales-list" class="space-y-2.5 text-xs"></div>
+        </div>
+
+        <!-- Daftar Riwayat Pengeluaran di Bulan Ini -->
+        <div class="card p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">🧾 Daftar Transaksi Keluar Bulan Ini</h3>
+              <p class="text-xs text-slate-500">Semua catatan beli bahan, plastik roll, stiker, & bensin pada bulan ini</p>
+            </div>
+          </div>
+
+          <div id="recap-expenses-month-list" class="divide-y divide-slate-100 text-xs max-h-80 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+    </section>
+
   </main>
+
+  <!-- MODAL SIMPAN SETORAN MINGGU INI KE RIWAYAT BULANAN -->
+  <div id="save-week-modal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h3 class="text-base font-extrabold text-slate-900">📥 Simpan Setoran Minggu Ini ke Rekap Bulanan</h3>
+        <button onclick="closeSaveWeekModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      </div>
+
+      <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-950 space-y-1">
+        <p class="font-bold">Ringkasan Penjualan di 10 Toko Saat Ini:</p>
+        <p id="save-week-summary" class="font-extrabold text-emerald-700 text-sm"></p>
+        <p class="text-[11px] text-emerald-800">Simpan ke riwayat saat kamu sudah selesai ambil uang setoran minggu ini dan ingin mulai kloter minggu baru.</p>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Tanggal Setoran / Minggu Ke-</label>
+          <input type="date" id="save-week-date" class="w-full border border-slate-300 rounded-xl px-3 py-2 font-bold" />
+        </div>
+        <div>
+          <label class="font-bold text-slate-700 block mb-1">Nama Kloter / Catatan Minggu</label>
+          <input type="text" id="save-week-note" placeholder="Contoh: Setoran Minggu Ke-1 November" class="w-full border border-slate-300 rounded-xl px-3 py-2" />
+        </div>
+        <label class="flex items-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 cursor-pointer">
+          <input type="checkbox" id="save-week-reset-stores" checked class="mt-0.5 rounded text-emerald-600" />
+          <span class="text-slate-700">
+            <b>Sekalian mulai minggu baru di 10 toko</b> (Kosongkan angka <i>Laku</i>, <i>Melempem</i>, dan <i>Checklist Pengiriman</i> agar siap untuk minggu berikutnya).
+          </span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeSaveWeekModal()" class="text-xs font-bold px-4 py-2 rounded-xl border border-slate-300 text-slate-600">Batal</button>
+        <button onclick="confirmSaveWeek()" class="text-xs font-extrabold px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow">
+          ✅ Simpan ke Rekap Bulanan
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL OPER SISA BAGUS KE TOKO LARIS -->
   <div id="oper-modal" class="fixed inset-0 bg-slate-950/60 hidden items-center justify-center z-50 p-4">
@@ -290,10 +455,26 @@
     const STORAGE_KEY = 'SNACK_SIMPLE_V2';
     const HARGA_SETOR = 1500;
 
+    const BULAN_INDO = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    const CATEGORY_META = {
+      'Beli Keripik Sagu (2 Kg)':  { icon: '🥠', color: '#f59e0b', barClass: 'bg-amber-500',   badgeClass: 'bg-amber-100 text-amber-900' },
+      'Beli Kerupuk Seblak (2 Kg)':{ icon: '🌶️', color: '#f43f5e', barClass: 'bg-rose-500',    badgeClass: 'bg-rose-100 text-rose-900' },
+      'Beli Plastik Roll':         { icon: '🛍️', color: '#3b82f6', barClass: 'bg-blue-500',    badgeClass: 'bg-blue-100 text-blue-900' },
+      'Beli Bensin Keliling':      { icon: '⛽', color: '#f97316', barClass: 'bg-orange-500',  badgeClass: 'bg-orange-100 text-orange-900' },
+      'Beli Stiker Lembaran':      { icon: '🏷️', color: '#8b5cf6', barClass: 'bg-violet-500',  badgeClass: 'bg-violet-100 text-violet-900' },
+      'Lainnya':                   { icon: '📦', color: '#14b8a6', barClass: 'bg-teal-500',    badgeClass: 'bg-teal-100 text-teal-900' }
+    };
+
     let state = null;
     let operCtx = null;
-    let currentStoreFilter = 'all'; // 'all' | 'pending' | 'delivered'
-    let editingExpenseId = null;    // ID pengeluaran yang sedang di-edit
+    let currentStoreFilter = 'all';
+    let editingExpenseId = null;
+    let selectedRecapMonth = null; // Format 'YYYY-MM'
+    let spentDonutChartInstance = null;
 
     function todayStr(offsetDays = 0) {
       const d = new Date();
@@ -306,9 +487,28 @@
       return (n < 0 ? '-Rp ' : 'Rp ') + Math.abs(n).toLocaleString('id-ID');
     }
 
+    function formatMonthLabel(ym) {
+      if (!ym || !ym.includes('-')) return ym;
+      const [y, m] = ym.split('-');
+      const idx = parseInt(m, 10) - 1;
+      return `${BULAN_INDO[idx] || m} ${y}`;
+    }
+
+    function getPrevMonthKey(ym) {
+      if (!ym || !ym.includes('-')) return null;
+      let [y, m] = ym.split('-').map(Number);
+      m -= 1;
+      if (m < 1) {
+        m = 12;
+        y -= 1;
+      }
+      return `${y}-${String(m).padStart(2, '0')}`;
+    }
+
     function defaultData() {
       return {
         updatedAt: Date.now(),
+        weeklyHistory: [],
         expenses: [
           { id: 'e_1793952420436', date: '2026-10-31', category: 'Beli Stiker Lembaran', amount: 10000, note: '' },
           { id: 'e_1793952403080', date: '2026-10-31', category: 'Beli Bensin Keliling', amount: 20000, note: '' },
@@ -317,18 +517,24 @@
           { id: 'e_1793952365249', date: '2026-10-31', category: 'Beli Keripik Sagu (2 Kg)', amount: 71000, note: '' }
         ],
         stores: [
-          { id: 't1',  name: 'WSD 3',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: true,  sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
-          { id: 't2',  name: 'WSD 4',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
-          { id: 't3',  name: 'WSD 5',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 15, melempem: 1 }, seblak: { titip: 10, laku: 0,  melempem: 0 } },
-          { id: 't4',  name: 'WSD 6 ',      delivered: false, dropDate: '2026-10-30', sellSagu: false, sellSeblak: true,  sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
-          { id: 't5',  name: 'WSD 7',       delivered: false, dropDate: '2026-10-30', sellSagu: false, sellSeblak: true,  sagu: { titip: 12, laku: 12, melempem: 0 }, seblak: { titip: 12, laku: 11, melempem: 0 } },
-          { id: 't6',  name: 'WSD 10',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
-          { id: 't7',  name: 'WSD 11',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 0,  melempem: 0 }, seblak: { titip: 18, laku: 12, melempem: 0 } },
-          { id: 't8',  name: 'WSD 14',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 1,  laku: 0,  melempem: 1 } },
-          { id: 't9',  name: 'WSD 15',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: true,  sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
-          { id: 't10', name: 'Cafe AdaAja', delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: true,  sagu: { titip: 10, laku: 0,  melempem: 0 }, seblak: { titip: 10, laku: 0,  melempem: 0 } }
+          { id: 't1',  name: 'WSD 3',       delivered: true,  dropDate: '2026-11-04', sellSagu: true,  sellSeblak: true,  sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
+          { id: 't2',  name: 'WSD 4',       delivered: true,  dropDate: '2026-11-04', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't3',  name: 'WSD 5',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 10, laku: 0,  melempem: 0 } },
+          { id: 't4',  name: 'WSD 6 ',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't5',  name: 'WSD 7',       delivered: false, dropDate: '2026-10-30', sellSagu: false, sellSeblak: true,  sagu: { titip: 12, laku: 12, melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
+          { id: 't6',  name: 'WSD 10',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't7',  name: 'WSD 11',      delivered: true,  dropDate: '2026-11-04', sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 0,  melempem: 0 }, seblak: { titip: 18, laku: 12, melempem: 0 } },
+          { id: 't8',  name: 'WSD 14',      delivered: true,  dropDate: '2026-11-04', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 1,  laku: 0,  melempem: 1 } },
+          { id: 't9',  name: 'WSD 15',      delivered: true,  dropDate: '2026-11-04', sellSagu: true,  sellSeblak: true,  sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
+          { id: 't10', name: 'Cafe AdaAja', delivered: true,  dropDate: '2026-11-04', sellSagu: true,  sellSeblak: true,  sagu: { titip: 10, laku: 0,  melempem: 0 }, seblak: { titip: 10, laku: 0,  melempem: 0 } }
         ]
       };
+    }
+
+    function ensureStateStructure() {
+      if (!state.expenses) state.expenses = [];
+      if (!state.stores) state.stores = [];
+      if (!state.weeklyHistory) state.weeklyHistory = [];
     }
 
     function setCloudStatus(online, message) {
@@ -354,6 +560,7 @@
       } else {
         state = defaultData();
       }
+      ensureStateStructure();
       render();
 
       await initialSyncSupabase();
@@ -379,6 +586,7 @@
         if (rows && rows.length > 0 && rows[0].data && rows[0].data.stores) {
           state = rows[0].data;
           state.updatedAt = rows[0].updated_at || state.updatedAt;
+          ensureStateStructure();
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
           render();
           setCloudStatus(true, 'CLOUD LIVE AKTIF (HP ↔ Laptop)');
@@ -421,7 +629,6 @@
     }
 
     async function pullFromSupabase() {
-      // Jangan timpa layar saat user sedang mengetik atau sedang meng-edit pengeluaran
       if (editingExpenseId !== null) return;
       if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
         return;
@@ -441,6 +648,7 @@
           if (!state.updatedAt || rows[0].updated_at > state.updatedAt) {
             state = rows[0].data;
             state.updatedAt = rows[0].updated_at;
+            ensureStateStructure();
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             render();
             const now = new Date();
@@ -483,6 +691,7 @@
     }
 
     function render() {
+      ensureStateStructure();
       const totalModal = state.expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
 
       let sumTitip = 0, sumLaku = 0, sumBagus = 0, sumMelempem = 0;
@@ -496,11 +705,14 @@
         if (st.delivered) countDelivered++;
       });
 
+      // Tambahkan juga laku dari riwayat mingguan ke ringkasan total jika ada
+      const historyLaku = state.weeklyHistory.reduce((acc, w) => acc + (w.totalLaku || 0), 0);
+      const grandTotalLaku = sumLaku + historyLaku;
+
       const totalStores = state.stores.length;
       const countPending = totalStores - countDelivered;
       const deliveryPct = totalStores > 0 ? Math.round((countDelivered / totalStores) * 100) : 0;
 
-      // Update Progres Pengiriman & Tombol Filter
       document.getElementById('delivery-progress-text').textContent =
         `Progres Pengiriman: ${countDelivered} dari ${totalStores} Toko Sudah Dikirim (${deliveryPct}%)`;
       document.getElementById('delivery-progress-bar').style.width = `${deliveryPct}%`;
@@ -518,14 +730,14 @@
         }
       });
 
-      const totalOmzet = sumLaku * HARGA_SETOR;
+      const totalOmzet = grandTotalLaku * HARGA_SETOR;
       const selisih = totalOmzet - totalModal;
 
       document.getElementById('top-modal').textContent = rp(totalModal);
       document.getElementById('top-modal-detail').textContent = `Dari ${state.expenses.length} catatan pengeluaran`;
 
       document.getElementById('top-omzet').textContent = rp(totalOmzet);
-      document.getElementById('top-omzet-detail').textContent = `${sumLaku} bungkus laku × Rp 1.500`;
+      document.getElementById('top-omzet-detail').textContent = `${grandTotalLaku} bungkus laku × Rp 1.500`;
 
       const profitEl = document.getElementById('top-profit');
       const statusEl = document.getElementById('top-profit-status');
@@ -546,7 +758,7 @@
         cardEl.className = 'card p-4 border-l-4 border-l-amber-500';
       }
 
-      document.getElementById('top-pack-sold').textContent = `${sumLaku} Bks`;
+      document.getElementById('top-pack-sold').textContent = `${grandTotalLaku} Bks`;
       document.getElementById('top-pack-good').textContent = `${sumBagus} Bks`;
       document.getElementById('top-pack-bad').textContent = `${sumMelempem} Bks`;
 
@@ -568,7 +780,6 @@
         </div>
       `).join('');
 
-      // Filter daftar toko sesuai tombol filter yang aktif
       const filteredStores = state.stores.filter(st => {
         if (currentStoreFilter === 'pending') return !st.delivered;
         if (currentStoreFilter === 'delivered') return !!st.delivered;
@@ -589,10 +800,8 @@
           return `
             <div class="${isDeliv ? 'card-delivered' : 'card'} p-4 space-y-3.5 flex flex-col justify-between transition-all">
               <div class="space-y-3">
-                <!-- BARIS ATAS: CHECKLIST PENGIRIMAN + NAMA TOKO + HAPUS -->
                 <div class="flex items-center justify-between gap-2 border-b ${isDeliv ? 'border-emerald-200' : 'border-slate-100'} pb-2.5">
                   <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <!-- TOMBOL CHECKLIST DI SEBELAH NAMA TOKO -->
                     <button
                       type="button"
                       onclick="toggleDelivered('${st.id}')"
@@ -727,7 +936,7 @@
         }).join('');
       }
 
-      // Render Daftar Pengeluaran (Terkunci Secara Default, Klik Edit Baru Bisa Diubah)
+      // Render Daftar Pengeluaran
       document.getElementById('exp-total-badge').textContent = 'Total Modal: ' + rp(totalModal);
       const expEl = document.getElementById('expenses-list');
       expEl.innerHTML = state.expenses.map(e => {
@@ -794,6 +1003,445 @@
           </div>
         `;
       }).join('');
+
+      // Render Rekap Bulanan (Ala myBCA)
+      renderMonthlyRecap();
+    }
+
+    // ============================================================================
+    // LOGIKA REKAP BULANAN (ALA myBCA)
+    // ============================================================================
+    function getAvailableMonths() {
+      const set = new Set();
+      state.expenses.forEach(e => {
+        if (e.date && e.date.length >= 7) set.add(e.date.slice(0, 7));
+      });
+      state.stores.forEach(st => {
+        if (st.dropDate && st.dropDate.length >= 7) set.add(st.dropDate.slice(0, 7));
+      });
+      state.weeklyHistory.forEach(w => {
+        if (w.month) set.add(w.month);
+        else if (w.date && w.date.length >= 7) set.add(w.date.slice(0, 7));
+      });
+      set.add(todayStr().slice(0, 7));
+      return Array.from(set).sort().reverse(); // Urut dari bulan terbaru
+    }
+
+    function getMonthMetrics(monthKey) {
+      // 1. Pengeluaran pada bulan tersebut
+      const monthExpenses = state.expenses.filter(e => (e.date || '').slice(0, 7) === monthKey);
+      const totalSpent = monthExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+
+      // Breakdown per kategori
+      const catMap = {};
+      monthExpenses.forEach(e => {
+        const cat = e.category || 'Lainnya';
+        if (!catMap[cat]) {
+          catMap[cat] = { category: cat, amount: 0, count: 0 };
+        }
+        catMap[cat].amount += (e.amount || 0);
+        catMap[cat].count += 1;
+      });
+
+      const categories = Object.values(catMap)
+        .map(c => ({
+          ...c,
+          pct: totalSpent > 0 ? Math.round((c.amount / totalSpent) * 1000) / 10 : 0,
+          meta: CATEGORY_META[c.category] || CATEGORY_META['Lainnya']
+        }))
+        .sort((a, b) => b.amount - a.amount);
+
+      // 2. Pemasukan (Setoran) pada bulan tersebut:
+      // a) Dari riwayat kloter mingguan yang sudah disimpan di bulan itu
+      const monthHistory = state.weeklyHistory.filter(w => {
+        const m = w.month || (w.date || '').slice(0, 7);
+        return m === monthKey;
+      });
+
+      // b) Dari toko yang saat ini sedang aktif dan tanggal titipnya di bulan itu
+      const activeStoresInMonth = state.stores.filter(st => (st.dropDate || '').slice(0, 7) === monthKey);
+      let activeLaku = 0, activeTitip = 0, activeMelempem = 0;
+      activeStoresInMonth.forEach(st => {
+        const m = calcStore(st);
+        activeLaku += m.totalLaku;
+        activeTitip += m.totalTitip;
+        activeMelempem += m.totalMelempem;
+      });
+
+      const historyLaku = monthHistory.reduce((acc, w) => acc + (w.totalLaku || 0), 0);
+      const totalLakuMonth = historyLaku + activeLaku;
+      const totalIncome = totalLakuMonth * HARGA_SETOR;
+      const netCashflow = totalIncome - totalSpent;
+
+      return {
+        monthKey,
+        monthExpenses,
+        totalSpent,
+        categories,
+        monthHistory,
+        activeStoresInMonth,
+        activeLaku,
+        activeTitip,
+        activeMelempem,
+        totalLakuMonth,
+        totalIncome,
+        netCashflow
+      };
+    }
+
+    function renderMonthlyRecap() {
+      const months = getAvailableMonths();
+      if (!selectedRecapMonth || !months.includes(selectedRecapMonth)) {
+        // Default ke bulan yang memiliki transaksi pengeluaran atau bulan terbaru
+        const firstWithExp = months.find(m => state.expenses.some(e => (e.date || '').startsWith(m)));
+        selectedRecapMonth = firstWithExp || months[0];
+      }
+
+      const selectEl = document.getElementById('recap-month-select');
+      selectEl.innerHTML = months.map(m => `
+        <option value="${m}" class="text-slate-900 font-bold" ${m === selectedRecapMonth ? 'selected' : ''}>
+          📅 ${formatMonthLabel(m)}
+        </option>
+      `).join('');
+
+      const curr = getMonthMetrics(selectedRecapMonth);
+      const prevKey = getPrevMonthKey(selectedRecapMonth);
+      const prev = prevKey ? getMonthMetrics(prevKey) : null;
+
+      // Update 3 Kartu Utama & Perbandingan dengan Bulan Sebelumnya
+      document.getElementById('recap-spent').textContent = rp(curr.totalSpent);
+      document.getElementById('recap-income').textContent = rp(curr.totalIncome);
+      document.getElementById('recap-net').textContent = (curr.netCashflow >= 0 ? '+' : '') + rp(curr.netCashflow);
+      document.getElementById('recap-net').className = curr.netCashflow >= 0
+        ? 'text-2xl font-extrabold text-emerald-600'
+        : 'text-2xl font-extrabold text-amber-600';
+
+      if (prev && (prev.totalSpent > 0 || prev.totalIncome > 0)) {
+        const diffSpent = curr.totalSpent - prev.totalSpent;
+        const spentVsEl = document.getElementById('recap-spent-vs');
+        if (diffSpent === 0) {
+          spentVsEl.textContent = `Sama dengan ${formatMonthLabel(prevKey)}`;
+          spentVsEl.className = 'text-[11px] font-bold text-slate-500';
+        } else if (diffSpent < 0) {
+          spentVsEl.textContent = `📉 Lebih hemat ${rp(Math.abs(diffSpent))} vs ${formatMonthLabel(prevKey)}`;
+          spentVsEl.className = 'text-[11px] font-extrabold text-emerald-600';
+        } else {
+          spentVsEl.textContent = `📈 Naik +${rp(diffSpent)} vs ${formatMonthLabel(prevKey)}`;
+          spentVsEl.className = 'text-[11px] font-extrabold text-rose-600';
+        }
+
+        const diffIncome = curr.totalIncome - prev.totalIncome;
+        const incVsEl = document.getElementById('recap-income-vs');
+        incVsEl.textContent = `${curr.totalLakuMonth} bks laku (${diffIncome >= 0 ? '📈 +' + rp(diffIncome) : '📉 ' + rp(diffIncome)} vs bln lalu)`;
+        incVsEl.className = diffIncome >= 0 ? 'text-[11px] font-extrabold text-emerald-600' : 'text-[11px] font-bold text-amber-700';
+
+        const diffNet = curr.netCashflow - prev.netCashflow;
+        const netVsEl = document.getElementById('recap-net-vs');
+        netVsEl.textContent = diffNet >= 0
+          ? `🚀 Untung naik +${rp(diffNet)} dibanding ${formatMonthLabel(prevKey)}`
+          : `⏳ Selisih ${rp(diffNet)} dibanding ${formatMonthLabel(prevKey)}`;
+        netVsEl.className = diffNet >= 0 ? 'text-[11px] font-extrabold text-emerald-700' : 'text-[11px] font-bold text-slate-500';
+      } else {
+        document.getElementById('recap-spent-vs').textContent = `Belum ada data pembanding di ${formatMonthLabel(prevKey)}`;
+        document.getElementById('recap-spent-vs').className = 'text-[11px] font-semibold text-slate-400';
+        document.getElementById('recap-income-vs').textContent = `Total ${curr.totalLakuMonth} bungkus terjual × Rp 1.500`;
+        document.getElementById('recap-income-vs').className = 'text-[11px] font-semibold text-slate-500';
+        document.getElementById('recap-net-vs').textContent = curr.netCashflow >= 0
+          ? '✅ Bulan ini sudah untung bersih!'
+          : `⏳ Kurang laku ${Math.ceil(Math.abs(curr.netCashflow) / HARGA_SETOR)} bks lagi di bulan ini`;
+        document.getElementById('recap-net-vs').className = curr.netCashflow >= 0
+          ? 'text-[11px] font-extrabold text-emerald-700'
+          : 'text-[11px] font-extrabold text-amber-700';
+      }
+
+      // Update Donut Chart & Daftar Breakdown Kategori ala myBCA
+      document.getElementById('recap-tx-count').textContent = `${curr.monthExpenses.length} Transaksi Keluar`;
+      document.getElementById('donut-center-total').textContent = rp(curr.totalSpent);
+
+      const catListEl = document.getElementById('recap-category-list');
+      if (curr.categories.length === 0) {
+        catListEl.innerHTML = `
+          <div class="p-6 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-bold">
+            Belum ada catatan pengeluaran di bulan ${formatMonthLabel(selectedRecapMonth)}.
+          </div>
+        `;
+      } else {
+        catListEl.innerHTML = curr.categories.map(c => `
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-base">${c.meta.icon}</span>
+                <div>
+                  <strong class="font-extrabold text-slate-900 block">${c.category}</strong>
+                  <span class="text-[10px] text-slate-500 font-semibold">${c.count}x transaksi</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <strong class="font-extrabold text-slate-900 text-sm block">${rp(c.amount)}</strong>
+                <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full ${c.meta.badgeClass}">${c.pct}%</span>
+              </div>
+            </div>
+            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div class="h-full ${c.meta.barClass} rounded-full transition-all duration-300" style="width: ${c.pct}%"></div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderSpentDonutChart(curr);
+
+      // Render Daftar Kloter Setoran Mingguan di Bulan Ini
+      const salesListEl = document.getElementById('recap-sales-list');
+      const salesItemsHtml = [];
+
+      if (curr.activeStoresInMonth.length > 0) {
+        salesItemsHtml.push(`
+          <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-extrabold uppercase bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                🔄 Sedang Berjalan di Kartu Toko
+              </span>
+              <strong class="block text-sm font-extrabold text-slate-900 mt-1">
+                ${curr.activeStoresInMonth.length} Toko Titipan Aktif (${formatMonthLabel(selectedRecapMonth)})
+              </strong>
+              <span class="text-[11px] text-slate-600">
+                Dititip: <b>${curr.activeTitip} bks</b> • Sudah Laku: <b>${curr.activeLaku} bks</b> • Melempem: <b>${curr.activeMelempem} bks</b>
+              </span>
+            </div>
+            <div class="text-right shrink-0">
+              <strong class="text-sm font-extrabold text-emerald-700 block">${rp(curr.activeLaku * HARGA_SETOR)}</strong>
+            </div>
+          </div>
+        `);
+      }
+
+      curr.monthHistory.forEach(w => {
+        salesItemsHtml.push(`
+          <div class="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-bold text-emerald-800">${w.date} • Riwayat Tersimpan</span>
+              <strong class="block text-sm font-extrabold text-slate-900">${w.note || 'Setoran Mingguan'}</strong>
+              <span class="text-[11px] text-slate-600">
+                Laku: <b>${w.totalLaku} bks</b> (dari ${w.totalTitip} bks) • Melempem: <b>${w.totalMelempem || 0} bks</b>
+              </span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <strong class="text-sm font-extrabold text-emerald-700">${rp((w.totalLaku || 0) * HARGA_SETOR)}</strong>
+              <button onclick="deleteWeeklyHistory('${w.id}')" class="text-slate-400 hover:text-rose-600 p-1" title="Hapus riwayat minggu ini">🗑️</button>
+            </div>
+          </div>
+        `);
+      });
+
+      if (salesItemsHtml.length === 0) {
+        salesListEl.innerHTML = `
+          <div class="p-6 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 font-semibold">
+            Belum ada catatan setoran penjualan pada bulan ${formatMonthLabel(selectedRecapMonth)}.
+          </div>
+        `;
+      } else {
+        salesListEl.innerHTML = salesItemsHtml.join('');
+      }
+
+      // Render Daftar Pengeluaran di Bulan Ini
+      const expMonthEl = document.getElementById('recap-expenses-month-list');
+      if (curr.monthExpenses.length === 0) {
+        expMonthEl.innerHTML = `
+          <div class="p-6 text-center text-slate-400 font-semibold">
+            Tidak ada pengeluaran tercatat di bulan ini.
+          </div>
+        `;
+      } else {
+        expMonthEl.innerHTML = curr.monthExpenses.map(e => {
+          const meta = CATEGORY_META[e.category] || CATEGORY_META['Lainnya'];
+          return `
+            <div class="py-2.5 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <span class="text-base">${meta.icon}</span>
+                <div>
+                  <strong class="text-slate-900 font-bold block">${e.category}</strong>
+                  <span class="text-[11px] text-slate-400">${e.date}${e.note ? ' • ' + e.note : ''}</span>
+                </div>
+              </div>
+              <strong class="text-rose-600 font-extrabold">${rp(e.amount)}</strong>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function renderSpentDonutChart(curr) {
+      const ctx = document.getElementById('spentDonutChart');
+      if (!ctx) return;
+
+      if (spentDonutChartInstance) {
+        spentDonutChartInstance.destroy();
+      }
+
+      if (curr.categories.length === 0) {
+        spentDonutChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Belum Ada Pengeluaran'],
+            datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }]
+          },
+          options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+        });
+        return;
+      }
+
+      spentDonutChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: curr.categories.map(c => c.category),
+          datasets: [{
+            data: curr.categories.map(c => c.amount),
+            backgroundColor: curr.categories.map(c => c.meta.color),
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '70%',
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    function changeRecapMonth(val) {
+      selectedRecapMonth = val;
+      renderMonthlyRecap();
+    }
+
+    function shiftMonth(dir) {
+      const months = getAvailableMonths(); // Terbaru di index 0
+      const idx = months.indexOf(selectedRecapMonth);
+      if (idx === -1) return;
+      // dir = -1 (bulan sebelumnya -> index lebih besar), dir = +1 (bulan berikutnya -> index lebih kecil)
+      const nextIdx = idx - dir;
+      if (nextIdx >= 0 && nextIdx < months.length) {
+        selectedRecapMonth = months[nextIdx];
+        renderMonthlyRecap();
+      }
+    }
+
+    function openSaveWeekModal() {
+      let sumTitip = 0, sumLaku = 0, sumMelempem = 0;
+      state.stores.forEach(st => {
+        const m = calcStore(st);
+        sumTitip += m.totalTitip;
+        sumLaku += m.totalLaku;
+        sumMelempem += m.totalMelempem;
+      });
+
+      document.getElementById('save-week-summary').textContent =
+        `Total Laku: ${sumLaku} bungkus (${rp(sumLaku * HARGA_SETOR)}) dari ${sumTitip} bungkus titipan`;
+      document.getElementById('save-week-date').value = todayStr();
+      const monthLabel = formatMonthLabel(todayStr().slice(0, 7));
+      const existingCount = state.weeklyHistory.filter(w => (w.month || '') === todayStr().slice(0, 7)).length;
+      document.getElementById('save-week-note').value = `Setoran Minggu Ke-${existingCount + 1} (${monthLabel})`;
+
+      const modal = document.getElementById('save-week-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSaveWeekModal() {
+      const modal = document.getElementById('save-week-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function confirmSaveWeek() {
+      let sumTitip = 0, sumLaku = 0, sumMelempem = 0;
+      state.stores.forEach(st => {
+        const m = calcStore(st);
+        sumTitip += m.totalTitip;
+        sumLaku += m.totalLaku;
+        sumMelempem += m.totalMelempem;
+      });
+
+      const dateVal = document.getElementById('save-week-date').value || todayStr();
+      const noteVal = document.getElementById('save-week-note').value.trim() || 'Setoran Mingguan';
+      const resetStores = document.getElementById('save-week-reset-stores').checked;
+
+      state.weeklyHistory.unshift({
+        id: 'w_' + Date.now(),
+        date: dateVal,
+        month: dateVal.slice(0, 7),
+        note: noteVal,
+        totalTitip: sumTitip,
+        totalLaku: sumLaku,
+        totalMelempem: sumMelempem,
+        omzet: sumLaku * HARGA_SETOR
+      });
+
+      if (resetStores) {
+        state.stores.forEach(st => {
+          st.delivered = false;
+          st.sagu.laku = 0;
+          st.sagu.melempem = 0;
+          st.seblak.laku = 0;
+          st.seblak.melempem = 0;
+        });
+      }
+
+      selectedRecapMonth = dateVal.slice(0, 7);
+      closeSaveWeekModal();
+      save();
+      showSection('recap');
+    }
+
+    function deleteWeeklyHistory(id) {
+      if (!confirm('Hapus catatan riwayat mingguan ini?')) return;
+      state.weeklyHistory = state.weeklyHistory.filter(w => w.id !== id);
+      save();
+    }
+
+    function exportMonthlyCSV() {
+      const curr = getMonthMetrics(selectedRecapMonth);
+      const label = formatMonthLabel(selectedRecapMonth);
+
+      let csv = `REKAP BULANAN USAHA SNACK - ${label.toUpperCase()}\n\n`;
+      csv += `RINGKASAN KAS BULAN ${label.toUpperCase()}\n`;
+      csv += `Total Pengeluaran (Spent),${curr.totalSpent}\n`;
+      csv += `Total Pemasukan Setoran (Income),${curr.totalIncome}\n`;
+      csv += `Total Bungkus Laku,${curr.totalLakuMonth}\n`;
+      csv += `Selisih / Laba Bersih Bulan Ini,${curr.netCashflow}\n\n`;
+
+      csv += `RINCIAN PENGELUARAN PER KATEGORI (HABIS DI MANA SAJA)\n`;
+      csv += `Kategori Pengeluaran,Jumlah Transaksi,Total Nominal (Rp),Persentase (%)\n`;
+      curr.categories.forEach(c => {
+        csv += `"${c.category}",${c.count},${c.amount},${c.pct}%\n`;
+      });
+      csv += `\n`;
+
+      csv += `DAFTAR TRANSAKSI PENGELUARAN BULAN ${label.toUpperCase()}\n`;
+      csv += `Tanggal,Kategori,Nominal (Rp),Keterangan\n`;
+      curr.monthExpenses.forEach(e => {
+        csv += `${e.date},"${e.category}",${e.amount},"${e.note || ''}"\n`;
+      });
+      csv += `\n`;
+
+      csv += `REKAP SETORAN PENJUALAN BULAN ${label.toUpperCase()}\n`;
+      csv += `Tanggal/Status,Keterangan/Nama Toko,Dititip (Bks),Laku (Bks),Melempem (Bks),Uang Setoran (Rp)\n`;
+      curr.monthHistory.forEach(w => {
+        csv += `${w.date},"[Riwayat] ${w.note}",${w.totalTitip},${w.totalLaku},${w.totalMelempem || 0},${(w.totalLaku || 0) * HARGA_SETOR}\n`;
+      });
+      curr.activeStoresInMonth.forEach(st => {
+        const m = calcStore(st);
+        csv += `${st.dropDate},"[Aktif] ${st.name}",${m.totalTitip},${m.totalLaku},${m.totalMelempem},${m.uangSetor}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Rekap_Bulanan_Snack_${selectedRecapMonth}.csv`;
+      a.click();
     }
 
     function toggleDelivered(id) {
@@ -845,16 +1493,15 @@
     }
 
     function showSection(sec) {
-      document.getElementById('sec-stores').classList.toggle('hidden', sec !== 'stores');
-      document.getElementById('sec-modal').classList.toggle('hidden', sec !== 'modal');
-
-      document.getElementById('btn-sec-stores').className = sec === 'stores'
-        ? 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap'
-        : 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap';
-
-      document.getElementById('btn-sec-modal').className = sec === 'modal'
-        ? 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap'
-        : 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap';
+      ['stores', 'modal', 'recap'].forEach(s => {
+        document.getElementById('sec-' + s).classList.toggle('hidden', s !== sec);
+        document.getElementById('btn-sec-' + s).className = s === sec
+          ? 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-slate-900 text-white shadow whitespace-nowrap'
+          : 'px-4 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 whitespace-nowrap';
+      });
+      if (sec === 'recap') {
+        renderMonthlyRecap();
+      }
     }
 
     function updateStore(id, field, val) {
