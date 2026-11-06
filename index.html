@@ -21,6 +21,12 @@
       box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
       border: 1px solid #e2e8f0;
     }
+    .card-delivered {
+      background: #f0fdf4;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.10);
+      border: 2px solid #10b981;
+    }
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button {
       opacity: 1;
@@ -143,15 +149,47 @@
         <div id="fastest-stores-banner" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3"></div>
       </div>
 
-      <!-- Baris Judul & Tambah Toko -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Daftar Toko Titipan Kamu</h2>
-          <p class="text-xs text-slate-500">Klik nama toko untuk mengganti namanya. Centang jajan apa saja yang ditaruh di toko tersebut.</p>
+      <!-- BAR PROGRES PENGIRIMAN & FILTER KELILING -->
+      <div class="card p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-base">🚚</span>
+              <h3 id="delivery-progress-text" class="text-sm sm:text-base font-extrabold text-slate-900">
+                Progres Pengiriman: 0 dari 10 Toko Sudah Dikirim
+              </h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Centang tombol di sebelah nama toko saat snack sudah kamu taruh di toko tersebut.</p>
+          </div>
+
+          <button onclick="resetAllChecklists()" class="text-xs font-bold bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-300 px-3 py-2 rounded-xl transition self-start sm:self-center">
+            🔄 Reset Semua Checklist
+          </button>
         </div>
-        <button onclick="addNewStore()" class="text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl self-start sm:self-auto">
-          ➕ Tambah Toko Baru
-        </button>
+
+        <!-- Visual Progress Bar -->
+        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="delivery-progress-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Tombol Filter Cepat Saat Keliling + Tambah Toko -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="setStoreFilter('all')" id="flt-all" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-900 text-white">
+              Semua Toko
+            </button>
+            <button onclick="setStoreFilter('pending')" id="flt-pending" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              ⏳ Belum Dikirim Saja
+            </button>
+            <button onclick="setStoreFilter('delivered')" id="flt-delivered" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              ✅ Sudah Dikirim
+            </button>
+          </div>
+
+          <button onclick="addNewStore()" class="text-xs font-extrabold bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl">
+            ➕ Tambah Toko Baru
+          </button>
+        </div>
       </div>
 
       <!-- Daftar Kartu Toko -->
@@ -160,17 +198,6 @@
 
     <!-- ==================== BAGIAN MODAL & OPERASIONAL ==================== -->
     <section id="sec-modal" class="hidden space-y-5">
-      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-xs sm:text-sm text-emerald-950 space-y-1.5">
-        <p class="font-extrabold text-emerald-900">💡 Solusi Soal Plastik Roll (Rp 34.000) & Stiker Lembaran:</p>
-        <p>
-          Kamu <b>tidak perlu bingung</b> menghitung 1 roll plastik jadi berapa bungkus persisnya. Gunakan <b>Sistem Catat Saat Beli</b>:
-        </p>
-        <ul class="list-disc list-inside space-y-1 text-emerald-900">
-          <li>Saat kamu beli <b>Plastik Roll Rp 34.000</b>, tulis saja sekali Rp 34.000 di bawah ini.</li>
-          <li>Karena 1 roll muat 400–500 bungkus (bisa untuk 4 kali beli snack 2kg), maka <b>minggu depan saat beli snack lagi dan plastiknya masih ada, kamu tidak perlu tulis biaya plastik lagi!</b></li>
-        </ul>
-      </div>
-
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <!-- Form Catat Pengeluaran -->
         <div class="card p-5 space-y-3 h-fit">
@@ -205,12 +232,12 @@
           </form>
         </div>
 
-        <!-- Daftar Pengeluaran -->
+        <!-- Daftar Pengeluaran (Dengan Fitur Edit & Hapus) -->
         <div class="card p-5 lg:col-span-2 space-y-4">
           <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 class="text-base font-extrabold text-slate-900">Daftar Semua Uang Keluar (Modal & Operasional)</h3>
-              <p class="text-xs text-slate-500">Klik tombol hapus (🗑️) jika ada catatan yang salah</p>
+              <p class="text-xs text-slate-500">Klik <b>✏️ Edit</b> untuk mengubah data atau <b>🗑️</b> untuk menghapus</p>
             </div>
             <strong id="exp-total-badge" class="text-sm font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl">
               Total: Rp 0
@@ -265,6 +292,8 @@
 
     let state = null;
     let operCtx = null;
+    let currentStoreFilter = 'all'; // 'all' | 'pending' | 'delivered'
+    let editingExpenseId = null;    // ID pengeluaran yang sedang di-edit
 
     function todayStr(offsetDays = 0) {
       const d = new Date();
@@ -278,27 +307,26 @@
     }
 
     function defaultData() {
-      const tglTitip = todayStr(-7);
       return {
         updatedAt: Date.now(),
         expenses: [
-          { id: 'e1', date: tglTitip, category: 'Beli Keripik Sagu (2 Kg)', amount: 71000, note: '2 Kg dibagi 16-18gr jadi ~110 bungkus' },
-          { id: 'e2', date: tglTitip, category: 'Beli Kerupuk Seblak (2 Kg)', amount: 71000, note: '2 Kg dibagi 16-18gr jadi ~110 bungkus' },
-          { id: 'e3', date: tglTitip, category: 'Beli Plastik Roll', amount: 34000, note: '1 Roll potong sendiri (cukup buat 400-500 bks)' },
-          { id: 'e4', date: tglTitip, category: 'Beli Stiker Lembaran', amount: 15000, note: 'Stiker kemasan per lembar (isi 100-200+ pcs)' },
-          { id: 'e5', date: tglTitip, category: 'Beli Bensin Keliling', amount: 15000, note: 'Bensin keliling titip & ambil ke 10 toko' }
+          { id: 'e_1793952420436', date: '2026-10-31', category: 'Beli Stiker Lembaran', amount: 10000, note: '' },
+          { id: 'e_1793952403080', date: '2026-10-31', category: 'Beli Bensin Keliling', amount: 20000, note: '' },
+          { id: 'e_1793952377845', date: '2026-10-31', category: 'Beli Plastik Roll', amount: 34000, note: '' },
+          { id: 'e_1793952367685', date: '2026-10-31', category: 'Beli Keripik Sagu (2 Kg)', amount: 71000, note: '' },
+          { id: 'e_1793952365249', date: '2026-10-31', category: 'Beli Keripik Sagu (2 Kg)', amount: 71000, note: '' }
         ],
         stores: [
-          { id: 't1',  name: 'Toko 1',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 11, melempem: 0 }, seblak: { titip: 12, laku: 12, melempem: 0 } },
-          { id: 't2',  name: 'Toko 2',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 10, melempem: 0 }, seblak: { titip: 12, laku: 10, melempem: 0 } },
-          { id: 't3',  name: 'Toko 3',  dropDate: tglTitip, sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 15, melempem: 1 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
-          { id: 't4',  name: 'Toko 4',  dropDate: tglTitip, sellSagu: false, sellSeblak: true,  sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 20, laku: 18, melempem: 0 } },
-          { id: 't5',  name: 'Toko 5',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 12, melempem: 0 }, seblak: { titip: 12, laku: 11, melempem: 0 } },
-          { id: 't6',  name: 'Toko 6',  dropDate: tglTitip, sellSagu: true,  sellSeblak: false, sagu: { titip: 18, laku: 9,  melempem: 1 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
-          { id: 't7',  name: 'Toko 7',  dropDate: tglTitip, sellSagu: false, sellSeblak: true,  sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 18, laku: 12, melempem: 0 } },
-          { id: 't8',  name: 'Toko 8',  dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 12, laku: 8,  melempem: 0 }, seblak: { titip: 12, laku: 9,  melempem: 1 } },
-          { id: 't9',  name: 'Toko 9',  dropDate: tglTitip, sellSagu: true,  sellSeblak: false, sagu: { titip: 15, laku: 10, melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
-          { id: 't10', name: 'Toko 10', dropDate: tglTitip, sellSagu: true,  sellSeblak: true,  sagu: { titip: 10, laku: 6,  melempem: 0 }, seblak: { titip: 10, laku: 7,  melempem: 0 } }
+          { id: 't1',  name: 'WSD 3',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: true,  sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
+          { id: 't2',  name: 'WSD 4',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't3',  name: 'WSD 5',       delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 15, melempem: 1 }, seblak: { titip: 10, laku: 0,  melempem: 0 } },
+          { id: 't4',  name: 'WSD 6 ',      delivered: false, dropDate: '2026-10-30', sellSagu: false, sellSeblak: true,  sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't5',  name: 'WSD 7',       delivered: false, dropDate: '2026-10-30', sellSagu: false, sellSeblak: true,  sagu: { titip: 12, laku: 12, melempem: 0 }, seblak: { titip: 12, laku: 11, melempem: 0 } },
+          { id: 't6',  name: 'WSD 10',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 0,  laku: 0,  melempem: 0 }, seblak: { titip: 0,  laku: 0,  melempem: 0 } },
+          { id: 't7',  name: 'WSD 11',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 20, laku: 0,  melempem: 0 }, seblak: { titip: 18, laku: 12, melempem: 0 } },
+          { id: 't8',  name: 'WSD 14',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: false, sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 1,  laku: 0,  melempem: 1 } },
+          { id: 't9',  name: 'WSD 15',      delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: true,  sagu: { titip: 25, laku: 0,  melempem: 0 }, seblak: { titip: 25, laku: 0,  melempem: 0 } },
+          { id: 't10', name: 'Cafe AdaAja', delivered: false, dropDate: '2026-10-30', sellSagu: true,  sellSeblak: true,  sagu: { titip: 10, laku: 0,  melempem: 0 }, seblak: { titip: 10, laku: 0,  melempem: 0 } }
         ]
       };
     }
@@ -343,7 +371,7 @@
         });
 
         if (!res.ok) {
-          setCloudStatus(false, 'Menunggu Tabel SQL di Supabase');
+          setCloudStatus(false, 'Menunggu Koneksi Supabase');
           return;
         }
 
@@ -393,6 +421,8 @@
     }
 
     async function pullFromSupabase() {
+      // Jangan timpa layar saat user sedang mengetik atau sedang meng-edit pengeluaran
+      if (editingExpenseId !== null) return;
       if (document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
         return;
       }
@@ -456,12 +486,36 @@
       const totalModal = state.expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
 
       let sumTitip = 0, sumLaku = 0, sumBagus = 0, sumMelempem = 0;
+      let countDelivered = 0;
       state.stores.forEach(st => {
         const m = calcStore(st);
         sumTitip += m.totalTitip;
         sumLaku += m.totalLaku;
         sumBagus += m.totalBagus;
         sumMelempem += m.totalMelempem;
+        if (st.delivered) countDelivered++;
+      });
+
+      const totalStores = state.stores.length;
+      const countPending = totalStores - countDelivered;
+      const deliveryPct = totalStores > 0 ? Math.round((countDelivered / totalStores) * 100) : 0;
+
+      // Update Progres Pengiriman & Tombol Filter
+      document.getElementById('delivery-progress-text').textContent =
+        `Progres Pengiriman: ${countDelivered} dari ${totalStores} Toko Sudah Dikirim (${deliveryPct}%)`;
+      document.getElementById('delivery-progress-bar').style.width = `${deliveryPct}%`;
+
+      document.getElementById('flt-all').textContent = `Semua Toko (${totalStores})`;
+      document.getElementById('flt-pending').textContent = `⏳ Belum Dikirim Saja (${countPending})`;
+      document.getElementById('flt-delivered').textContent = `✅ Sudah Dikirim (${countDelivered})`;
+
+      ['all', 'pending', 'delivered'].forEach(f => {
+        const btn = document.getElementById('flt-' + f);
+        if (currentStoreFilter === f) {
+          btn.className = 'px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-900 text-white shadow-xs';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
       });
 
       const totalOmzet = sumLaku * HARGA_SETOR;
@@ -514,150 +568,280 @@
         </div>
       `).join('');
 
+      // Filter daftar toko sesuai tombol filter yang aktif
+      const filteredStores = state.stores.filter(st => {
+        if (currentStoreFilter === 'pending') return !st.delivered;
+        if (currentStoreFilter === 'delivered') return !!st.delivered;
+        return true;
+      });
+
       const storesEl = document.getElementById('stores-list');
-      storesEl.innerHTML = state.stores.map(st => {
-        const m = calcStore(st);
-        return `
-          <div class="card p-4 space-y-3.5 flex flex-col justify-between">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-                <div class="flex items-center gap-2 flex-1">
-                  <span class="text-lg">🏪</span>
-                  <input type="text" value="${st.name}"
-                    onchange="updateStore('${st.id}', 'name', this.value)"
-                    class="font-extrabold text-base text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-slate-900 focus:outline-none w-full"
-                    title="Klik untuk ganti nama toko" />
+      if (filteredStores.length === 0) {
+        storesEl.innerHTML = `
+          <div class="card p-8 text-center col-span-1 md:col-span-2 text-slate-500 text-sm font-bold">
+            🎉 Tidak ada toko pada filter ini.
+          </div>
+        `;
+      } else {
+        storesEl.innerHTML = filteredStores.map(st => {
+          const m = calcStore(st);
+          const isDeliv = !!st.delivered;
+          return `
+            <div class="${isDeliv ? 'card-delivered' : 'card'} p-4 space-y-3.5 flex flex-col justify-between transition-all">
+              <div class="space-y-3">
+                <!-- BARIS ATAS: CHECKLIST PENGIRIMAN + NAMA TOKO + HAPUS -->
+                <div class="flex items-center justify-between gap-2 border-b ${isDeliv ? 'border-emerald-200' : 'border-slate-100'} pb-2.5">
+                  <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <!-- TOMBOL CHECKLIST DI SEBELAH NAMA TOKO -->
+                    <button
+                      type="button"
+                      onclick="toggleDelivered('${st.id}')"
+                      class="shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition shadow-2xs ${
+                        isDeliv
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                      }"
+                      title="Klik untuk menandai Sudah Dikirim / Belum Dikirim">
+                      <span>${isDeliv ? '✅' : '⬜'}</span>
+                      <span>${isDeliv ? 'Sudah Dikirim' : 'Belum Dikirim'}</span>
+                    </button>
+
+                    <input type="text" value="${st.name}"
+                      onchange="updateStore('${st.id}', 'name', this.value)"
+                      class="font-extrabold text-base text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-slate-900 focus:outline-none w-full min-w-[90px]"
+                      title="Klik untuk ganti nama toko" />
+                  </div>
+                  <button onclick="removeStore('${st.id}')" class="text-xs text-slate-400 hover:text-rose-600 px-1.5 shrink-0" title="Hapus toko">🗑️</button>
                 </div>
-                <button onclick="removeStore('${st.id}')" class="text-xs text-slate-400 hover:text-rose-600 px-1.5" title="Hapus toko">🗑️</button>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs bg-white/80 p-2.5 rounded-xl border border-slate-200/70">
+                  <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-1.5 font-bold text-amber-900 cursor-pointer">
+                      <input type="checkbox" ${st.sellSagu ? 'checked' : ''}
+                        onchange="toggleProduct('${st.id}', 'sellSagu', this.checked)"
+                        class="rounded text-amber-600" />
+                      🥠 Sagu
+                    </label>
+                    <label class="flex items-center gap-1.5 font-bold text-rose-900 cursor-pointer">
+                      <input type="checkbox" ${st.sellSeblak ? 'checked' : ''}
+                        onchange="toggleProduct('${st.id}', 'sellSeblak', this.checked)"
+                        class="rounded text-rose-600" />
+                      🌶️ Seblak
+                    </label>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-slate-500">Titip:</span>
+                    <input type="date" value="${st.dropDate}"
+                      onchange="updateStore('${st.id}', 'dropDate', this.value)"
+                      class="border border-slate-300 rounded-lg px-2 py-0.5 font-bold text-slate-800 bg-white" />
+                  </div>
+                </div>
+
+                ${st.sellSagu ? `
+                  <div class="p-3 rounded-xl bg-amber-50/90 border border-amber-200 space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                      <strong class="font-extrabold text-amber-950">🥠 Keripik Sagu</strong>
+                      <span class="font-bold text-emerald-700">Uang Laku: ${rp(st.sagu.laku * HARGA_SETOR)}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                      <div class="bg-white p-2 rounded-lg border border-amber-200">
+                        <label class="text-[10px] font-bold text-slate-500 block">1. Dititip</label>
+                        <input type="number" min="0" value="${st.sagu.titip}"
+                          onchange="updateItem('${st.id}', 'sagu', 'titip', this.value)"
+                          class="w-full font-extrabold text-base text-slate-900 focus:outline-none" />
+                      </div>
+                      <div class="bg-white p-2 rounded-lg border-2 border-emerald-400">
+                        <label class="text-[10px] font-bold text-emerald-700 block">2. Laku Terjual</label>
+                        <input type="number" min="0" value="${st.sagu.laku}"
+                          onchange="updateItem('${st.id}', 'sagu', 'laku', this.value)"
+                          class="w-full font-extrabold text-base text-emerald-700 focus:outline-none" />
+                      </div>
+                      <div class="bg-white p-2 rounded-lg border border-rose-300">
+                        <label class="text-[10px] font-bold text-rose-600 block">3. Melempem</label>
+                        <input type="number" min="0" value="${st.sagu.melempem}"
+                          onchange="updateItem('${st.id}', 'sagu', 'melempem', this.value)"
+                          class="w-full font-extrabold text-base text-rose-600 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-1 text-xs">
+                      <span class="text-amber-900">Sisa Masih Bagus: <b>${m.saguBagus} bungkus</b></span>
+                      ${m.saguBagus > 0 ? `
+                        <button onclick="openOper('${st.id}', 'sagu', ${m.saguBagus})"
+                          class="text-[11px] font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg">
+                          🔄 Oper ke Toko Laris
+                        </button>
+                      ` : '<span class="text-[11px] font-bold text-emerald-700">✨ Habis!</span>'}
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${st.sellSeblak ? `
+                  <div class="p-3 rounded-xl bg-rose-50/90 border border-rose-200 space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                      <strong class="font-extrabold text-rose-950">🌶️ Kerupuk Seblak</strong>
+                      <span class="font-bold text-emerald-700">Uang Laku: ${rp(st.seblak.laku * HARGA_SETOR)}</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                      <div class="bg-white p-2 rounded-lg border border-rose-200">
+                        <label class="text-[10px] font-bold text-slate-500 block">1. Dititip</label>
+                        <input type="number" min="0" value="${st.seblak.titip}"
+                          onchange="updateItem('${st.id}', 'seblak', 'titip', this.value)"
+                          class="w-full font-extrabold text-base text-slate-900 focus:outline-none" />
+                      </div>
+                      <div class="bg-white p-2 rounded-lg border-2 border-emerald-400">
+                        <label class="text-[10px] font-bold text-emerald-700 block">2. Laku Terjual</label>
+                        <input type="number" min="0" value="${st.seblak.laku}"
+                          onchange="updateItem('${st.id}', 'seblak', 'laku', this.value)"
+                          class="w-full font-extrabold text-base text-emerald-700 focus:outline-none" />
+                      </div>
+                      <div class="bg-white p-2 rounded-lg border border-rose-300">
+                        <label class="text-[10px] font-bold text-rose-600 block">3. Melempem</label>
+                        <input type="number" min="0" value="${st.seblak.melempem}"
+                          onchange="updateItem('${st.id}', 'seblak', 'melempem', this.value)"
+                          class="w-full font-extrabold text-base text-rose-600 focus:outline-none" />
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-1 text-xs">
+                      <span class="text-rose-900">Sisa Masih Bagus: <b>${m.seblakBagus} bungkus</b></span>
+                      ${m.seblakBagus > 0 ? `
+                        <button onclick="openOper('${st.id}', 'seblak', ${m.seblakBagus})"
+                          class="text-[11px] font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg">
+                          🔄 Oper ke Toko Laris
+                        </button>
+                      ` : '<span class="text-[11px] font-bold text-emerald-700">✨ Habis!</span>'}
+                    </div>
+                  </div>
+                ` : ''}
               </div>
 
-              <div class="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-50 p-2.5 rounded-xl">
-                <div class="flex items-center gap-3">
-                  <label class="flex items-center gap-1.5 font-bold text-amber-900 cursor-pointer">
-                    <input type="checkbox" ${st.sellSagu ? 'checked' : ''}
-                      onchange="toggleProduct('${st.id}', 'sellSagu', this.checked)"
-                      class="rounded text-amber-600" />
-                    🥠 Sagu
-                  </label>
-                  <label class="flex items-center gap-1.5 font-bold text-rose-900 cursor-pointer">
-                    <input type="checkbox" ${st.sellSeblak ? 'checked' : ''}
-                      onchange="toggleProduct('${st.id}', 'sellSeblak', this.checked)"
-                      class="rounded text-rose-600" />
-                    🌶️ Seblak
-                  </label>
-                </div>
-
-                <div class="flex items-center gap-1.5">
-                  <span class="text-slate-500">Titip:</span>
-                  <input type="date" value="${st.dropDate}"
-                    onchange="updateStore('${st.id}', 'dropDate', this.value)"
-                    class="border border-slate-300 rounded-lg px-2 py-0.5 font-bold text-slate-800 bg-white" />
+              <div class="pt-2.5 border-t ${isDeliv ? 'border-emerald-200' : 'border-slate-100'} flex items-center justify-between text-xs">
+                <span class="text-slate-500">Jadwal Ambil (+7hr): <b>${m.dueStr}</b></span>
+                <div>
+                  <span class="text-slate-500">Setoran Toko Ini: </span>
+                  <strong class="text-sm font-extrabold text-emerald-600">${rp(m.uangSetor)}</strong>
                 </div>
               </div>
-
-              ${st.sellSagu ? `
-                <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-2">
-                  <div class="flex justify-between items-center text-xs">
-                    <strong class="font-extrabold text-amber-950">🥠 Keripik Sagu</strong>
-                    <span class="font-bold text-emerald-700">Uang Laku: ${rp(st.sagu.laku * HARGA_SETOR)}</span>
-                  </div>
-                  <div class="grid grid-cols-3 gap-2 text-xs">
-                    <div class="bg-white p-2 rounded-lg border border-amber-200">
-                      <label class="text-[10px] font-bold text-slate-500 block">1. Dititip</label>
-                      <input type="number" min="0" value="${st.sagu.titip}"
-                        onchange="updateItem('${st.id}', 'sagu', 'titip', this.value)"
-                        class="w-full font-extrabold text-base text-slate-900 focus:outline-none" />
-                    </div>
-                    <div class="bg-white p-2 rounded-lg border-2 border-emerald-400">
-                      <label class="text-[10px] font-bold text-emerald-700 block">2. Laku Terjual</label>
-                      <input type="number" min="0" value="${st.sagu.laku}"
-                        onchange="updateItem('${st.id}', 'sagu', 'laku', this.value)"
-                        class="w-full font-extrabold text-base text-emerald-700 focus:outline-none" />
-                    </div>
-                    <div class="bg-white p-2 rounded-lg border border-rose-300">
-                      <label class="text-[10px] font-bold text-rose-600 block">3. Melempem</label>
-                      <input type="number" min="0" value="${st.sagu.melempem}"
-                        onchange="updateItem('${st.id}', 'sagu', 'melempem', this.value)"
-                        class="w-full font-extrabold text-base text-rose-600 focus:outline-none" />
-                    </div>
-                  </div>
-                  <div class="flex items-center justify-between pt-1 text-xs">
-                    <span class="text-amber-900">Sisa Masih Bagus: <b>${m.saguBagus} bungkus</b></span>
-                    ${m.saguBagus > 0 ? `
-                      <button onclick="openOper('${st.id}', 'sagu', ${m.saguBagus})"
-                        class="text-[11px] font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg">
-                        🔄 Oper ke Toko Laris
-                      </button>
-                    ` : '<span class="text-[11px] font-bold text-emerald-700">✨ Habis!</span>'}
-                  </div>
-                </div>
-              ` : ''}
-
-              ${st.sellSeblak ? `
-                <div class="p-3 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2">
-                  <div class="flex justify-between items-center text-xs">
-                    <strong class="font-extrabold text-rose-950">🌶️ Kerupuk Seblak</strong>
-                    <span class="font-bold text-emerald-700">Uang Laku: ${rp(st.seblak.laku * HARGA_SETOR)}</span>
-                  </div>
-                  <div class="grid grid-cols-3 gap-2 text-xs">
-                    <div class="bg-white p-2 rounded-lg border border-rose-200">
-                      <label class="text-[10px] font-bold text-slate-500 block">1. Dititip</label>
-                      <input type="number" min="0" value="${st.seblak.titip}"
-                        onchange="updateItem('${st.id}', 'seblak', 'titip', this.value)"
-                        class="w-full font-extrabold text-base text-slate-900 focus:outline-none" />
-                    </div>
-                    <div class="bg-white p-2 rounded-lg border-2 border-emerald-400">
-                      <label class="text-[10px] font-bold text-emerald-700 block">2. Laku Terjual</label>
-                      <input type="number" min="0" value="${st.seblak.laku}"
-                        onchange="updateItem('${st.id}', 'seblak', 'laku', this.value)"
-                        class="w-full font-extrabold text-base text-emerald-700 focus:outline-none" />
-                    </div>
-                    <div class="bg-white p-2 rounded-lg border border-rose-300">
-                      <label class="text-[10px] font-bold text-rose-600 block">3. Melempem</label>
-                      <input type="number" min="0" value="${st.seblak.melempem}"
-                        onchange="updateItem('${st.id}', 'seblak', 'melempem', this.value)"
-                        class="w-full font-extrabold text-base text-rose-600 focus:outline-none" />
-                    </div>
-                  </div>
-                  <div class="flex items-center justify-between pt-1 text-xs">
-                    <span class="text-rose-900">Sisa Masih Bagus: <b>${m.seblakBagus} bungkus</b></span>
-                    ${m.seblakBagus > 0 ? `
-                      <button onclick="openOper('${st.id}', 'seblak', ${m.seblakBagus})"
-                        class="text-[11px] font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1 rounded-lg">
-                        🔄 Oper ke Toko Laris
-                      </button>
-                    ` : '<span class="text-[11px] font-bold text-emerald-700">✨ Habis!</span>'}
-                  </div>
-                </div>
-              ` : ''}
             </div>
+          `;
+        }).join('');
+      }
 
-            <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span class="text-slate-500">Jadwal Ambil (+7hr): <b>${m.dueStr}</b></span>
-              <div>
-                <span class="text-slate-500">Setoran Toko Ini: </span>
-                <strong class="text-sm font-extrabold text-emerald-600">${rp(m.uangSetor)}</strong>
+      // Render Daftar Pengeluaran (Terkunci Secara Default, Klik Edit Baru Bisa Diubah)
+      document.getElementById('exp-total-badge').textContent = 'Total Modal: ' + rp(totalModal);
+      const expEl = document.getElementById('expenses-list');
+      expEl.innerHTML = state.expenses.map(e => {
+        if (editingExpenseId === e.id) {
+          return `
+            <div class="py-3.5 px-3 my-1 bg-slate-50 border-2 border-slate-900 rounded-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-slate-900">✏️ Edit Catatan Pengeluaran</span>
+                <button type="button" onclick="cancelEditExpense()" class="text-xs font-bold text-slate-500 hover:text-slate-800">✕ Batal</button>
               </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label class="text-[11px] font-bold text-slate-600 block mb-1">Tanggal Beli</label>
+                  <input type="date" id="edit-exp-date-${e.id}" value="${e.date}" class="w-full border border-slate-300 bg-white rounded-lg px-2.5 py-1.5 font-semibold" />
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-slate-600 block mb-1">Beli Apa / Kategori</label>
+                  <select id="edit-exp-cat-${e.id}" class="w-full border border-slate-300 bg-white rounded-lg px-2.5 py-1.5 font-semibold">
+                    <option value="Beli Keripik Sagu (2 Kg)" ${e.category === 'Beli Keripik Sagu (2 Kg)' ? 'selected' : ''}>🥠 Beli Keripik Sagu (2 Kg)</option>
+                    <option value="Beli Kerupuk Seblak (2 Kg)" ${e.category === 'Beli Kerupuk Seblak (2 Kg)' ? 'selected' : ''}>🌶️ Beli Kerupuk Seblak (2 Kg)</option>
+                    <option value="Beli Plastik Roll" ${e.category === 'Beli Plastik Roll' ? 'selected' : ''}>🛍️ Beli Plastik Roll</option>
+                    <option value="Beli Stiker Lembaran" ${e.category === 'Beli Stiker Lembaran' ? 'selected' : ''}>🏷️ Beli Stiker Lembaran</option>
+                    <option value="Beli Bensin Keliling" ${e.category === 'Beli Bensin Keliling' ? 'selected' : ''}>⛽ Beli Bensin Keliling</option>
+                    <option value="Lainnya" ${e.category === 'Lainnya' ? 'selected' : ''}>📦 Biaya Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-slate-600 block mb-1">Nominal Rupiah (Rp)</label>
+                  <input type="number" id="edit-exp-amt-${e.id}" value="${e.amount}" min="0" class="w-full border border-slate-300 bg-white rounded-lg px-2.5 py-1.5 font-extrabold text-slate-900" />
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-slate-600 block mb-1">Keterangan</label>
+                  <input type="text" id="edit-exp-note-${e.id}" value="${e.note || ''}" placeholder="Opsional..." class="w-full border border-slate-300 bg-white rounded-lg px-2.5 py-1.5" />
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 pt-1">
+                <button type="button" onclick="cancelEditExpense()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold text-xs">
+                  Batal
+                </button>
+                <button type="button" onclick="saveEditExpense('${e.id}')" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-xs">
+                  💾 Simpan Perubahan
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="py-3 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[11px] text-slate-400 font-semibold">${e.date}</span>
+              <strong class="block text-sm font-extrabold text-slate-800">${e.category}</strong>
+              <span class="text-xs text-slate-500">${e.note || ''}</span>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+              <strong class="text-sm font-extrabold text-rose-600">${rp(e.amount)}</strong>
+              <button type="button" onclick="startEditExpense('${e.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1" title="Edit catatan ini">
+                ✏️ Edit
+              </button>
+              <button type="button" onclick="deleteExpense('${e.id}')" class="p-1 text-slate-300 hover:text-rose-600 font-bold text-sm" title="Hapus catatan ini">
+                🗑️
+              </button>
             </div>
           </div>
         `;
       }).join('');
+    }
 
-      document.getElementById('exp-total-badge').textContent = 'Total Modal: ' + rp(totalModal);
-      const expEl = document.getElementById('expenses-list');
-      expEl.innerHTML = state.expenses.map(e => `
-        <div class="py-3 flex items-center justify-between gap-2">
-          <div>
-            <span class="text-[11px] text-slate-400 font-semibold">${e.date}</span>
-            <strong class="block text-sm font-extrabold text-slate-800">${e.category}</strong>
-            <span class="text-xs text-slate-500">${e.note || ''}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <strong class="text-sm font-extrabold text-rose-600">${rp(e.amount)}</strong>
-            <button onclick="deleteExpense('${e.id}')" class="text-slate-300 hover:text-rose-600 font-bold text-sm">🗑️</button>
-          </div>
-        </div>
-      `).join('');
+    function toggleDelivered(id) {
+      const st = state.stores.find(s => s.id === id);
+      if (!st) return;
+      st.delivered = !st.delivered;
+      save();
+    }
+
+    function setStoreFilter(filterType) {
+      currentStoreFilter = filterType;
+      render();
+    }
+
+    function resetAllChecklists() {
+      if (!confirm('Reset semua checklist pengiriman toko kembali menjadi "Belum Dikirim"? (Nama toko & angka penjualan tetap aman)')) return;
+      state.stores.forEach(st => {
+        st.delivered = false;
+      });
+      save();
+    }
+
+    function startEditExpense(id) {
+      editingExpenseId = id;
+      render();
+    }
+
+    function cancelEditExpense() {
+      editingExpenseId = null;
+      render();
+    }
+
+    function saveEditExpense(id) {
+      const exp = state.expenses.find(e => e.id === id);
+      if (!exp) return;
+
+      const newDate = document.getElementById(`edit-exp-date-${id}`).value || todayStr();
+      const newCat = document.getElementById(`edit-exp-cat-${id}`).value;
+      const newAmt = Math.max(0, parseInt(document.getElementById(`edit-exp-amt-${id}`).value || 0, 10));
+      const newNote = document.getElementById(`edit-exp-note-${id}`).value.trim();
+
+      exp.date = newDate;
+      exp.category = newCat;
+      exp.amount = newAmt;
+      exp.note = newNote;
+
+      editingExpenseId = null;
+      save();
     }
 
     function showSection(sec) {
@@ -702,6 +886,7 @@
       state.stores.push({
         id: 't_' + Date.now(),
         name: 'Toko ' + nextNum,
+        delivered: false,
         dropDate: todayStr(),
         sellSagu: true,
         sellSeblak: true,
@@ -800,16 +985,17 @@
     }
 
     function resetDefault() {
-      if (!confirm('Kembalikan ke contoh data awal 10 toko?')) return;
+      if (!confirm('Kembalikan ke data awal 10 toko (WSD 3 - Cafe AdaAja)?')) return;
       state = defaultData();
       save();
     }
 
     function exportCSV() {
-      let csv = 'Nama Toko,Tanggal Titip,Jadwal Ambil,Titip Sagu,Laku Sagu,Sisa Bagus Sagu,Melempem Sagu,Titip Seblak,Laku Seblak,Sisa Bagus Seblak,Melempem Seblak,Total Uang Setoran (Rp)\n';
+      let csv = 'Nama Toko,Status Kirim,Tanggal Titip,Jadwal Ambil,Titip Sagu,Laku Sagu,Sisa Bagus Sagu,Melempem Sagu,Titip Seblak,Laku Seblak,Sisa Bagus Seblak,Melempem Seblak,Total Uang Setoran (Rp)\n';
       state.stores.forEach(st => {
         const m = calcStore(st);
-        csv += `"${st.name}",${st.dropDate},${m.dueStr},${st.sagu.titip},${st.sagu.laku},${m.saguBagus},${st.sagu.melempem},${st.seblak.titip},${st.seblak.laku},${m.seblakBagus},${st.seblak.melempem},${m.uangSetor}\n`;
+        const statusKirim = st.delivered ? 'Sudah Dikirim' : 'Belum Dikirim';
+        csv += `"${st.name}","${statusKirim}",${st.dropDate},${m.dueStr},${st.sagu.titip},${st.sagu.laku},${m.saguBagus},${st.sagu.melempem},${st.seblak.titip},${st.seblak.laku},${m.seblakBagus},${st.seblak.melempem},${m.uangSetor}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const a = document.createElement('a');
